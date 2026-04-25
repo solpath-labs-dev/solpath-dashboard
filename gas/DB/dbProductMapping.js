@@ -81,7 +81,8 @@ function dbPmSeedProductMappingFromMaster_(opsSs, forceReseed) {
   for (r = 0; r < out.length; r += chunk) {
     var slice = out.slice(r, r + chunk);
     var startRow = 2 + r;
-    sh.getRange(startRow, 1, startRow + slice.length - 1, nColsM).setValues(slice);
+    /** getRange(r,c,numRows,numCols) — 3번째는 행 개수(끝 행 인덱스 아님). slice N행이면 N. */
+    sh.getRange(startRow, 1, slice.length, nColsM).setValues(slice);
   }
   return out.length;
 }
