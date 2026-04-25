@@ -129,7 +129,8 @@ function openSyncRouteAction_(action, e) {
         operationsSpreadsheetUrl: r0.url,
         alreadyConfigured: r0.already,
         productMappingHeadersApplied: r0.productMappingHeadersApplied,
-        createdNew: r0.createdNew
+        createdNew: r0.createdNew,
+        seededRowCount: r0.seededRowCount != null ? r0.seededRowCount : 0
       }
     };
   }
@@ -279,7 +280,8 @@ function doPost(e) {
         operationsSpreadsheetUrl: rI.url,
         alreadyConfigured: rI.already,
         productMappingHeadersApplied: rI.productMappingHeadersApplied,
-        createdNew: rI.createdNew
+        createdNew: rI.createdNew,
+        seededRowCount: rI.seededRowCount != null ? rI.seededRowCount : 0
       }
     });
   }

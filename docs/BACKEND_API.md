@@ -780,7 +780,7 @@ action=syncOpenFull
 
 | `action` (POST) | 용도 | 비고 |
 |-----------------|------|------|
-| `initOperationsSheets` | **새** 운영용 스프레드시트 생성(원천 DB와 **같은 Drive 폴더**), `SHEETS_OPERATIONS_ID` 저장, `product_mapping` 탭+헤더 | 최초 1회. 이미 ID가 있으면 `ok: false` + `ALREADY_CONFIGURED` 또는 idempotent `ok: true` (구현 선택) |
+| `initOperationsSheets` | **새** 운영용 스프레드시트 생성(원천 DB와 **같은 Drive 폴더**), `SHEETS_OPERATIONS_ID` 저장, `product_mapping` 탭+헤더·**원천 `products`에서 초기 행 시드** | 최초 1회. 이미 ID가 있으면 `ok: false` + `ALREADY_CONFIGURED` 또는 idempotent `ok: true` (구현 선택) |
 | `productMappingApply` | `prod_no` 기준 **배치 upsert** (프론트 **「수정하기」** 1클릭) | 본문 §2.3.3 |
 
 #### 2.3.1 `GET` `productMappingState` (JSONP)
@@ -860,10 +860,14 @@ action=initOperationsSheets
 {
   "operationsSpreadsheetId": "…",
   "operationsSpreadsheetUrl": "https://docs.google.com/spreadsheets/d/…/edit",
-  "productMappingHeadersApplied": true
+  "alreadyConfigured": false,
+  "productMappingHeadersApplied": true,
+  "createdNew": true,
+  "seededRowCount": 76
 }
 ```
 
+- `seededRowCount` — `product_mapping`이 **비어 있을 때만** 원천 `products`에서 `prod_no`·`product_name` 등으로 채운 행 수. 이미 2행 이상 있으면 **0** (덮어쓰지 않음).
 - 파일 제목 예: `솔루션편입_운영DB_아임웹` (팀에서 확정). 위치: 원천 마스터와 **같은 부모 폴더**([process.md](../process.md) · `dbSchema` `DB` 폴더 규칙)에 두는 것을 권장.
 
 #### 2.3.4 `POST` `productMappingApply`

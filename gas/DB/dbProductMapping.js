@@ -24,6 +24,65 @@ function dbPmAssertEnum_(v, allow) {
 }
 
 /**
+ * `product_mapping`이 **데이터 없이** 헤더만 있을 때(초기 생성 직후 등) 원천 `products`로 행을 채운다.
+ * 이미 2행 이상 데이터가 있으면 **아무 것도 하지 않음** (수동/수정하기 반영 보존).
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} opsSs
+ * @return {number} 기록한 행 수
+ */
+function dbPmSeedProductMappingFromMaster_(opsSs) {
+  var master;
+  try {
+    master = dbOpenMaster_();
+  } catch (e) {
+    Logger.log('dbPmSeedProductMappingFromMaster_: master ' + (e && e.message != null ? e.message : String(e)));
+    return 0;
+  }
+  var ps = master.getSheetByName(DB_SHEET_PRODUCTS);
+  if (!ps) {
+    return 0;
+  }
+  var lr = ps.getLastRow();
+  if (lr < 2) {
+    return 0;
+  }
+  var sh = dbGetOrCreateSheetWithHeaders_(opsSs, DB_SHEET_PRODUCT_MAPPING, DB_PRODUCT_MAPPING_HEADERS);
+  if (sh.getLastRow() > 1) {
+    return 0;
+  }
+  var nColsP = DB_PRODUCTS_HEADERS.length;
+  var pVals = ps.getRange(2, 1, lr, nColsP).getValues();
+  var nColsM = DB_PRODUCT_MAPPING_HEADERS.length;
+  var idxProdNo = 0;
+  var idxName = 3;
+  var now = new Date().toISOString();
+  var out = [];
+  var r;
+  for (r = 0; r < pVals.length; r++) {
+    var line = pVals[r] || [];
+    var pk = dbPmRowKey_(line[idxProdNo]);
+    if (!pk) {
+      continue;
+    }
+    var prodNo = parseInt(line[idxProdNo], 10);
+    if (isNaN(prodNo)) {
+      continue;
+    }
+    var fromProductsName = String(line[idxName] != null ? line[idxName] : '').trim();
+    out.push([prodNo, fromProductsName, 'unmapped', 'active', now, now, '']);
+  }
+  if (!out.length) {
+    return 0;
+  }
+  var chunk = 2000;
+  for (r = 0; r < out.length; r += chunk) {
+    var slice = out.slice(r, r + chunk);
+    var startRow = 2 + r;
+    sh.getRange(startRow, 1, startRow + slice.length - 1, nColsM).setValues(slice);
+  }
+  return out.length;
+}
+
+/**
  * @return {string}
  */
 function dbPmGetMasterParentFolderId_() {
@@ -61,13 +120,18 @@ function dbInitOperationsSheets_() {
     } else {
       try {
         var ss0 = SpreadsheetApp.openById(existing);
-        dbGetOrCreateSheetWithHeaders_(ss0, DB_SHEET_PRODUCT_MAPPING, DB_PRODUCT_MAPPING_HEADERS);
+        var shEx = dbGetOrCreateSheetWithHeaders_(ss0, DB_SHEET_PRODUCT_MAPPING, DB_PRODUCT_MAPPING_HEADERS);
+        var nSeed0 = 0;
+        if (shEx.getLastRow() < 2) {
+          nSeed0 = dbPmSeedProductMappingFromMaster_(ss0);
+        }
         return {
           id: existing,
           url: 'https://docs.google.com/spreadsheets/d/' + existing + '/edit',
           already: true,
           createdNew: false,
-          productMappingHeadersApplied: true
+          productMappingHeadersApplied: true,
+          seededRowCount: nSeed0
         };
       } catch (e0) {
         Logger.log('dbInitOperationsSheets_: existing id open fail, will recreate. ' + (e0 && e0.message));
@@ -103,6 +167,7 @@ function dbInitOperationsSheets_() {
   }
 
   dbGetOrCreateSheetWithHeaders_(ss, DB_SHEET_PRODUCT_MAPPING, DB_PRODUCT_MAPPING_HEADERS);
+  var seeded = dbPmSeedProductMappingFromMaster_(ss);
   dbDeleteOrphanDefaultSheetIfAny_(ss);
   p.setProperty(DB_PROP_SHEETS_OPERATIONS_ID, id);
 
@@ -111,7 +176,8 @@ function dbInitOperationsSheets_() {
     url: 'https://docs.google.com/spreadsheets/d/' + id + '/edit',
     already: false,
     createdNew: true,
-    productMappingHeadersApplied: true
+    productMappingHeadersApplied: true,
+    seededRowCount: seeded
   };
 }
 
