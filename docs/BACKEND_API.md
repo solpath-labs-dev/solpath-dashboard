@@ -782,6 +782,7 @@ action=syncOpenFull
 |-----------------|------|------|
 | `initOperationsSheets` | **새** 운영용 스프레드시트 생성(원천 DB와 **같은 Drive 폴더**), `SHEETS_OPERATIONS_ID` 저장, `product_mapping` 탭+헤더·**원천 `products`에서 초기 행 시드** | 최초 1회. 이미 ID가 있으면 `ok: false` + `ALREADY_CONFIGURED` 또는 idempotent `ok: true` (구현 선택) |
 | `productMappingApply` | `prod_no` 기준 **배치 upsert** (프론트 **「수정하기」** 1클릭) | 본문 §2.3.3 |
+| `productMappingReset` | 운영 `product_mapping` **본문 삭제** 후 원천 `products`로 **다시 시드** (unmapped / active) | JSONP/POST · **데이터 초기화** (복구 불가) |
 
 #### 2.3.1 `GET` `productMappingState` (JSONP)
 
@@ -869,6 +870,12 @@ action=initOperationsSheets
 
 - `seededRowCount` — `product_mapping`이 **비어 있을 때만** 원천 `products`에서 `prod_no`·`product_name` 등으로 채운 행 수. 이미 2행 이상 있으면 **0** (덮어쓰지 않음).
 - 파일 제목 예: `솔루션편입_운영DB_아임웹` (팀에서 확정). 위치: 원천 마스터와 **같은 부모 폴더**([process.md](../process.md) · `dbSchema` `DB` 폴더 규칙)에 두는 것을 권장.
+
+#### 2.3.3b `GET` `productMappingReset` (JSONP) / `action` 동일 (POST)
+
+- **효과:** `SHEETS_OPERATIONS_ID` 스프레드시트의 `product_mapping` 시트 **2행~** 를 비우고, 원천 `products`와 동일한 행 집합으로 다시 채움. 각 행 기본값: `internal_category`=`unmapped`, `lifecycle`=`active`, `notes`=`""`.
+- **성공 `data`:** `{ "seededRowCount": 76, "reset": true }` (시드된 행 수; 원천에 상품 없으면 0)
+- **실패:** `NO_OPERATIONS_SHEET` (운영 DB 없음)
 
 #### 2.3.4 `POST` `productMappingApply`
 

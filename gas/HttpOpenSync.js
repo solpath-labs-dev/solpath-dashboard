@@ -84,7 +84,8 @@ function openSyncAllowedActions_() {
     'productMappingState',
     'productMappingList',
     'initOperationsSheets',
-    'productMappingApply'
+    'productMappingApply',
+    'productMappingReset'
   ];
 }
 
@@ -96,7 +97,7 @@ function openSyncAllowedActions_() {
 function openSyncRouteAction_(action, e) {
   e = e || { parameter: {} };
   if (action === 'ping') {
-    return { ok: true, data: { name: 'openSync', version: 4, actions: openSyncAllowedActions_() } };
+    return { ok: true, data: { name: 'openSync', version: 5, actions: openSyncAllowedActions_() } };
   }
   if (action === 'syncOpenFull') {
     try {
@@ -140,6 +141,9 @@ function openSyncRouteAction_(action, e) {
       return { ok: false, error: { code: 'BAD_REQUEST', message: 'payload 또는 rows 없음' } };
     }
     return dbProductMappingApply_(rows0);
+  }
+  if (action === 'productMappingReset') {
+    return dbProductMappingResetFromMaster_();
   }
   return { ok: false, error: 'UNKNOWN_ACTION', allowed: openSyncAllowedActions_() };
 }

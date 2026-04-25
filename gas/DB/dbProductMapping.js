@@ -6,6 +6,9 @@
 var _DB_PM_CATEGORIES = ['unmapped', 'solpass', 'solutine', 'challenge', 'textbook'];
 /** @type {string[]} */
 var _DB_PM_LIFECYCLES = ['active', 'archived', 'test'];
+/** SPEC/스키마 기본값 — 빈 셀 아님 (internal_category, lifecycle, notes 빈문자) */
+var _DB_PM_DEFAULT_INTERNAL = 'unmapped';
+var _DB_PM_DEFAULT_LIFECYCLE = 'active';
 
 /**
  * @param {string} v
@@ -27,9 +30,10 @@ function dbPmAssertEnum_(v, allow) {
  * `product_mapping`이 **데이터 없이** 헤더만 있을 때(초기 생성 직후 등) 원천 `products`로 행을 채운다.
  * 이미 2행 이상 데이터가 있으면 **아무 것도 하지 않음** (수동/수정하기 반영 보존).
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} opsSs
+ * @param {boolean} [forceReseed] `true` — 이미 행이 있어도 덮어쓸 것(호출 측에서 먼저 비움 후 사용 권장)
  * @return {number} 기록한 행 수
  */
-function dbPmSeedProductMappingFromMaster_(opsSs) {
+function dbPmSeedProductMappingFromMaster_(opsSs, forceReseed) {
   var master;
   try {
     master = dbOpenMaster_();
@@ -46,7 +50,7 @@ function dbPmSeedProductMappingFromMaster_(opsSs) {
     return 0;
   }
   var sh = dbGetOrCreateSheetWithHeaders_(opsSs, DB_SHEET_PRODUCT_MAPPING, DB_PRODUCT_MAPPING_HEADERS);
-  if (sh.getLastRow() > 1) {
+  if (!forceReseed && sh.getLastRow() > 1) {
     return 0;
   }
   var nColsP = DB_PRODUCTS_HEADERS.length;
@@ -68,7 +72,7 @@ function dbPmSeedProductMappingFromMaster_(opsSs) {
       continue;
     }
     var fromProductsName = String(line[idxName] != null ? line[idxName] : '').trim();
-    out.push([prodNo, fromProductsName, 'unmapped', 'active', now, now, '']);
+    out.push([prodNo, fromProductsName, _DB_PM_DEFAULT_INTERNAL, _DB_PM_DEFAULT_LIFECYCLE, now, now, '']);
   }
   if (!out.length) {
     return 0;
@@ -80,6 +84,24 @@ function dbPmSeedProductMappingFromMaster_(opsSs) {
     sh.getRange(startRow, 1, startRow + slice.length - 1, nColsM).setValues(slice);
   }
   return out.length;
+}
+
+/**
+ * 운영 `product_mapping` 본문을 비운 뒤 원천 `products`로 다시 시드(분류 편집 **전부 폐기**).
+ * @return {{ ok: true, data: { seededRowCount: number, reset: true } }|{ ok: false, error: { code: string, message: string } }}
+ */
+function dbProductMappingResetFromMaster_() {
+  var ss;
+  try {
+    ss = dbPmOpenOpsOrThrow_();
+  } catch (e) {
+    return { ok: false, error: { code: 'NO_OPERATIONS_SHEET', message: '운영 DB가 없습니다.' } };
+  }
+  var sh = dbGetOrCreateSheetWithHeaders_(ss, DB_SHEET_PRODUCT_MAPPING, DB_PRODUCT_MAPPING_HEADERS);
+  var w = DB_PRODUCT_MAPPING_HEADERS.length;
+  dbClearDataRows2Plus_(sh, w);
+  var n = dbPmSeedProductMappingFromMaster_(ss, true);
+  return { ok: true, data: { seededRowCount: n, reset: true } };
 }
 
 /**
