@@ -111,11 +111,21 @@ function dbInitOperationsSheets_() {
  * @return {GoogleAppsScript.Spreadsheet.Spreadsheet}
  */
 function dbPmOpenOpsOrThrow_() {
-  var id = PropertiesService.getScriptProperties().getProperty(DB_PROP_SHEETS_OPERATIONS_ID);
+  var p = PropertiesService.getScriptProperties();
+  var id = p.getProperty(DB_PROP_SHEETS_OPERATIONS_ID);
   if (id == null || !String(id).trim()) {
     throw new Error('NO_OPERATIONS_SHEET');
   }
-  return SpreadsheetApp.openById(String(id).trim());
+  var sid = String(id).trim();
+  try {
+    return SpreadsheetApp.openById(sid);
+  } catch (e) {
+    Logger.log('dbPmOpenOpsOrThrow_: openById 실패 — SHEETS_OPERATIONS_ID 제거. ' + (e && e.message != null ? e.message : String(e)));
+    try {
+      p.deleteProperty(DB_PROP_SHEETS_OPERATIONS_ID);
+    } catch (d) {}
+    throw new Error('NO_OPERATIONS_SHEET');
+  }
 }
 
 /**
@@ -132,6 +142,9 @@ function dbProductMappingState_() {
   try {
     var ss = SpreadsheetApp.openById(id);
     if (!ss) {
+      try {
+        p.deleteProperty(DB_PROP_SHEETS_OPERATIONS_ID);
+      } catch (d) {}
       return { ok: true, data: { ready: false, reason: 'NO_OPERATIONS_SHEET', masterSpreadsheetUrl: masterUrl, productMappingSheetName: DB_SHEET_PRODUCT_MAPPING } };
     }
     return {
@@ -144,6 +157,9 @@ function dbProductMappingState_() {
       }
     };
   } catch (x) {
+    try {
+      p.deleteProperty(DB_PROP_SHEETS_OPERATIONS_ID);
+    } catch (d) {}
     return { ok: true, data: { ready: false, reason: 'NO_OPERATIONS_SHEET', masterSpreadsheetUrl: masterUrl, productMappingSheetName: DB_SHEET_PRODUCT_MAPPING } };
   }
 }

@@ -3,14 +3,33 @@
  */
 
 /**
+ * Properties의 `SHEETS_MASTER_ID`로 원천 DB를 연다.
+ * 파일이 삭제·이동돼 `openById`가 실패하면 Property를 비우고 `dbSetupMasterDatabase()`로 **빈 원천 DB를 새로 만든 뒤** 다시 연다(수동 키 삭제 대신).
  * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet}
  */
 function dbOpenMaster_() {
-  var id = PropertiesService.getScriptProperties().getProperty(DB_PROP_SHEETS_MASTER_ID);
+  var p = PropertiesService.getScriptProperties();
+  var id = p.getProperty(DB_PROP_SHEETS_MASTER_ID);
   if (id == null || !String(id).trim().length) {
     throw new Error('SHEETS_MASTER_ID 가 비어 있음. 먼저 dbSetupMasterDatabase() 실행.');
   }
-  return SpreadsheetApp.openById(String(id).trim());
+  var sid = String(id).trim();
+  try {
+    return SpreadsheetApp.openById(sid);
+  } catch (e) {
+    Logger.log(
+      'dbOpenMaster_: openById 실패(삭제·권한 등) — SHEETS_MASTER_ID 제거 후 dbSetupMasterDatabase. ' +
+        (e && e.message != null ? e.message : String(e))
+    );
+    try {
+      p.deleteProperty(DB_PROP_SHEETS_MASTER_ID);
+    } catch (d) {}
+    var info = dbSetupMasterDatabase();
+    if (!info || !info.id) {
+      throw new Error('원천 DB를 열 수 없고 재생성도 실패했습니다. Drive 폴더·`SHEETS_MASTER_PARENT_FOLDER_ID`·권한을 확인하세요.');
+    }
+    return SpreadsheetApp.openById(String(info.id).trim());
+  }
 }
 
 /**

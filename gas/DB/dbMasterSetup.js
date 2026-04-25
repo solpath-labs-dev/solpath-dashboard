@@ -3,7 +3,7 @@
  * **새 파일**은 `SpreadsheetApp.create`가 아니라 **Drive v3 Files.create** + `parents` (옮기기 없음).
  * 저장 위치: (1) **이 Apps Script가 Drive에 있는 상위 폴더** (2) 없을 때 Property / 코드 ID / `00_admin/10_IMWEB_DASHBOARD` 경로
  * → 그 **베이스** 안에 **`DB`라는 하위 폴더**를 `get` 또는 `create` 하고, 스프레드시트는 그 `DB` **안**에 둔다. (`dbSchema.js` `DB_SUBFOLDER_NAME`)
- * Script Properties: `SHEETS_MASTER_ID` — 기 있으면 **그걸로만 열지(새로 안 씀)**. 다른 파일을 쓰려면 Property에서 키 삭제 후 재실행.
+ * Script Properties: `SHEETS_MASTER_ID` — 있으면 그 ID로 연다. Drive에서 지워져 열기 실패 시 `dbOpenMaster_`가 키를 지우고 **이 함수와 같은 방식**으로 원천 DB를 다시 만든다. **수동**으로 바꾸려면 키 삭제 후 이 함수만 실행.
  * 위치: `SHEETS_MASTER_ID`가 옛 루트에 있어도, 매번 **스크립트 베이스/DB** 아래로 맞추기 위해 이동을 시도한다.
  */
 function dbSetupMasterDatabase() {
