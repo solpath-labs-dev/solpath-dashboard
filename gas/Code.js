@@ -7,6 +7,12 @@
 function doGet(e) {
   e = e || { parameter: {} };
   var p = e.parameter || {};
+  /** 대시보드 JSONP(크로스 오리진 fetch CORS 대신) — imweb·솔패스 */
+  var fmt = p.format != null ? String(p.format) : '';
+  var jcb = p.callback != null ? String(p.callback) : '';
+  if (fmt === 'jsonp' && jcb.length) {
+    return openSyncJsonpFromGet_(e, jcb);
+  }
   var err = p.error != null ? String(p.error) : '';
   if (err.length) {
     var d = p.error_description != null ? String(p.error_description) : '';

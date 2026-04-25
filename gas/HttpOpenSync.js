@@ -1,61 +1,89 @@
 /**
- * 대시보드 — Open API 전체 시트 스냅샷. Web App POST + CORS.
+ * 대시보드 — Open API 전체 시트 스냅샷. Web App
  * dbSyncOpenAll() = members → products(1p) → orders
  *
- * 본문: `application/x-www-form-urlencoded` 또는 `text/plain` (동일 key=value) — `action` 만
- *   (프론트는 브라우저 CORS simple POST용으로 `text/plain` 사용)
+ * POST: 본문 `text/plain` 또는 `application/x-www-form-urlencoded` — `action=ping|syncOpenFull`
+ * GET+JSONP(브라우저): `?format=jsonp&callback=NAME&action=...` — TextOutput엔 CORS(setHeader) API가 **없어**
+ *   fetch는 크로스 오리진 읽기에 CORS가 필요 → JSONP는 `<script src>`로 우회(임웹/솔패스)
  */
 
-/**
- * CORS(브라우저 fetch).
- * `Access-Control-Allow-Origin: *` 는 `credentials: 'include'` POST 와 **함께 쓸 수 없음** →
- *   임웹/분석(imdog) 등이 쿠키·자격 붙이면 200이어도 CORS에 막힌다.
- * Script Properties `CORS_ALLOW_ORIGIN` (선택) — 비우면 `https://www.solpath.co.kr` (apex는 속성에 `https://solpath.co.kr` 등으로 지정)
- * @return {Object<string,string>}
- */
-function openSyncCorsHeaders_() {
-  var p = PropertiesService.getScriptProperties();
-  var o = p.getProperty('CORS_ALLOW_ORIGIN');
-  o = o != null && String(o).trim().length ? String(o).trim() : 'https://www.solpath.co.kr';
-  return {
-    'Access-Control-Allow-Origin': o,
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers':
-      'Content-Type, X-Requested-With, Authorization, Traceparent, Baggage, Sentry-Trace, Request-Id',
-    'Access-Control-Max-Age': '3600',
-    'Vary': 'Origin'
-  };
-}
-
-function openSyncJsonResponse_(obj, httpHeaders) {
-  var t = ContentService.createTextOutput(JSON.stringify(obj));
-  t.setMimeType(ContentService.MimeType.JSON);
-  openSyncApplyHeaders_(t, httpHeaders);
-  return t;
-}
-
-function openSyncTextResponse_(text, httpHeaders) {
-  var t = ContentService.createTextOutput(text != null ? String(text) : '');
-  t.setMimeType(ContentService.MimeType.TEXT);
-  openSyncApplyHeaders_(t, httpHeaders);
-  return t;
+function openSyncTextOutputJson_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
- * @param {GoogleAppsScript.Content.TextOutput} out
- * @param {Object<string,string>|undefined} httpHeaders
+ * JSONP: `NAME({...json...});` — setHeader 불필요
+ * @param {Object} obj
+ * @param {string} callbackName
  */
-function openSyncApplyHeaders_(out, httpHeaders) {
-  if (!out || !httpHeaders) {
-    return;
+function openSyncTextOutputJsonp_(obj, callbackName) {
+  var safe = String(callbackName != null ? callbackName : '')
+    .replace(/[^0-9a-zA-Z_$]/g, '')
+    .replace(/^([0-9])/, '_$1');
+  if (safe.length < 1) {
+    safe = '_solpathCb';
   }
-  var k;
-  for (k in httpHeaders) {
-    if (Object.prototype.hasOwnProperty.call(httpHeaders, k)) {
-      out.setHeader(k, httpHeaders[k]);
+  if (safe.length > 64) {
+    safe = safe.slice(0, 64);
+  }
+  var t = safe + '(' + JSON.stringify(obj) + ');';
+  return ContentService.createTextOutput(t).setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+/**
+ * doGet: `?format=jsonp&callback=...&action=...` — Code.js 맨 앞에서만 호출
+ * @param {Object} e
+ * @param {string} callbackName
+ * @return {GoogleAppsScript.Content.TextOutput}
+ */
+function openSyncJsonpFromGet_(e, callbackName) {
+  var action = '';
+  try {
+    action = openSyncGetActionFromRequest_(e) || '';
+  } catch (err) {
+    return openSyncTextOutputJsonp_(
+      {
+        ok: false,
+        error: 'BAD_REQUEST',
+        message: err && err.message != null ? String(err.message) : String(err)
+      },
+      callbackName
+    );
+  }
+  if (action.length < 1) {
+    return openSyncTextOutputJsonp_(
+      { ok: false, error: 'BAD_REQUEST', message: 'action required' },
+      callbackName
+    );
+  }
+  return openSyncTextOutputJsonp_(openSyncExecuteAction_(action), callbackName);
+}
+
+/**
+ * @param {string} action
+ * @return {Object}
+ */
+function openSyncExecuteAction_(action) {
+  if (action === 'ping') {
+    return {
+      ok: true,
+      data: { name: 'openSync', version: 3, actions: ['ping', 'syncOpenFull'] }
+    };
+  }
+  if (action === 'syncOpenFull') {
+    try {
+      var data = dbSyncOpenAll();
+      data.spreadsheetUrl = openSyncMasterSpreadsheetUrl_();
+      return { ok: true, data: data };
+    } catch (x) {
+      return {
+        ok: false,
+        error: 'SYNC_FAILED',
+        message: x && x.message != null ? String(x.message) : String(x)
+      };
     }
   }
+  return { ok: false, error: 'UNKNOWN_ACTION', allowed: ['ping', 'syncOpenFull'] };
 }
 
 /**
@@ -76,10 +104,7 @@ function openSyncGetActionFromRequest_(e) {
   var ct = post.type != null ? String(post.type).toLowerCase() : '';
   var raw = String(post.contents);
   if (ct.length) {
-    if (
-      ct.indexOf('application/x-www-form-urlencoded') < 0 &&
-      ct.indexOf('text/plain') < 0
-    ) {
+    if (ct.indexOf('application/x-www-form-urlencoded') < 0 && ct.indexOf('text/plain') < 0) {
       return '';
     }
   }
@@ -115,43 +140,17 @@ function openSyncParseFormUrlEncoded_(body) {
  * @param {Object} e
  */
 function doPost(e) {
-  var h = openSyncCorsHeaders_();
   var action = '';
   try {
-    action = openSyncGetActionFromRequest_(e);
+    action = openSyncGetActionFromRequest_(e) || '';
   } catch (err) {
-    return openSyncJsonResponse_(
-      { ok: false, error: 'BAD_REQUEST', message: err && err.message != null ? String(err.message) : String(err) },
-      h
-    );
-  }
-  if (action === 'ping') {
-    return openSyncJsonResponse_({ ok: true, data: { name: 'openSync', version: 2, actions: ['ping', 'syncOpenFull'] } }, h);
-  }
-  if (action === 'syncOpenFull') {
-    try {
-      var data = dbSyncOpenAll();
-      data.spreadsheetUrl = openSyncMasterSpreadsheetUrl_();
-      return openSyncJsonResponse_({ ok: true, data: data }, h);
-    } catch (x) {
-      return openSyncJsonResponse_(
-        {
-          ok: false,
-          error: 'SYNC_FAILED',
-          message: x && x.message != null ? String(x.message) : String(x)
-        },
-        h
-      );
-    }
-  }
-  return openSyncJsonResponse_(
-    {
+    return openSyncTextOutputJson_({
       ok: false,
-      error: 'UNKNOWN_ACTION',
-      allowed: ['ping', 'syncOpenFull']
-    },
-    h
-  );
+      error: 'BAD_REQUEST',
+      message: err && err.message != null ? String(err.message) : String(err)
+    });
+  }
+  return openSyncTextOutputJson_(openSyncExecuteAction_(action));
 }
 
 /**
@@ -166,9 +165,7 @@ function openSyncMasterSpreadsheetUrl_() {
   return 'https://docs.google.com/spreadsheets/d/' + id + '/edit';
 }
 
-/**
- * CORS preflight
- */
+/** OPTIONS — 일부 런타임에선 무시. 본문만. */
 function doOptions() {
-  return openSyncTextResponse_('', openSyncCorsHeaders_());
+  return ContentService.createTextOutput('').setMimeType(ContentService.MimeType.TEXT);
 }
