@@ -26,8 +26,23 @@ function openSyncTextOutputJsonp_(obj, callbackName) {
   if (safe.length > 64) {
     safe = safe.slice(0, 64);
   }
-  var t = safe + '(' + JSON.stringify(obj) + ');';
+  var json = JSON.stringify(obj);
+  if (json == null) {
+    json = '{}';
+  }
+  /** script src로 삽입될 때 문자열 안의 `</script>` 등이 HTML 파서에 먹혀 조기 종료 → JSONP 실패. */
+  json = openSyncJsonpSanitizeJsonForScript_(json);
+  var t = safe + '(' + json + ');';
   return ContentService.createTextOutput(t).setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+/**
+ * JSONP 본문을 &lt;script&gt; 안에 넣을 때 안전하게 (XSS·조기 &lt;/script&gt; 종료 방지)
+ * @param {string} jsonStr
+ * @return {string}
+ */
+function openSyncJsonpSanitizeJsonForScript_(jsonStr) {
+  return String(jsonStr).replace(/</g, '\\u003c');
 }
 
 /**
