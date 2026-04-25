@@ -478,15 +478,37 @@ function dbProductMappingApply_(inputRows) {
     var pno = row.prod_no;
     var pnum = parseInt(pno, 10);
     if (isNaN(pnum)) {
-      return { ok: false, error: { code: 'BAD_REQUEST', message: 'prod_no 오류' } };
+      return { ok: false, error: { code: 'BAD_REQUEST', message: '상품 번호(prod_no)를 알 수 없습니다.' } };
     }
-    var ic = dbPmAssertEnum_(row.internal_category, _DB_PM_CATEGORIES);
+    var icRaw = row.internal_category != null ? String(row.internal_category).trim() : '';
+    if (!icRaw) {
+      icRaw = _DB_PM_DEFAULT_INTERNAL;
+    }
+    var ic = dbPmAssertEnum_(icRaw, _DB_PM_CATEGORIES);
     if (!ic) {
-      return { ok: false, error: { code: 'BAD_REQUEST', message: 'internal_category 허용 범위 아님' } };
+      return {
+        ok: false,
+        error: {
+          code: 'PM_BAD_INTERNAL',
+          message:
+            '내부 대분류를 저장할 수 없습니다(솔패스·솔루틴·챌린지·교재·자소서·미분류만 가능). 자소서 등이 막히면 GAS를 최신으로 배포했는지 담당자에게 확인하세요.'
+        }
+      };
     }
-    var life = dbPmAssertEnum_(row.lifecycle, _DB_PM_LIFECYCLES);
+    var lifeRaw = row.lifecycle != null ? String(row.lifecycle).trim() : '';
+    if (!lifeRaw) {
+      lifeRaw = _DB_PM_DEFAULT_LIFECYCLE;
+    }
+    var life = dbPmAssertEnum_(lifeRaw, _DB_PM_LIFECYCLES);
     if (!life) {
-      return { ok: false, error: { code: 'BAD_REQUEST', message: 'lifecycle 허용 범위 아님' } };
+      return {
+        ok: false,
+        error: {
+          code: 'PM_BAD_LIFECYCLE',
+          message:
+            '상태(진행·만료·테스트·(구)상품)를 저장할 수 없습니다. (구)상품 등이 막히는 경우는 GAS(구글 앱스 스크립트)가 옛배포인 경우가 많으니, 담당자에게 최신으로 다시 배포해 달라고 하세요.'
+        }
+      };
     }
     var pname = String(row.product_name != null ? row.product_name : '').trim();
     var nnotes = String(row.notes != null ? row.notes : '');
