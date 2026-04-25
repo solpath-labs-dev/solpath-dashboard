@@ -1,0 +1,19 @@
+# --- Secrets / credentials ---
+# clasp: 프로젝트 ID는 .clasp.json(커밋). OAuth 토큰은 홈의 ~/.clasprc.json(비커밋)
+.env
+.env.*
+credentials.json
+.clasprc.json
+*.key
+*.pem
+*.p12
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Logs ---
+*.log
+npm-debug.log*
