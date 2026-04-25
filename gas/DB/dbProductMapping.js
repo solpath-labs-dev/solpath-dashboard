@@ -171,6 +171,7 @@ function dbProductMappingState_() {
       ok: true,
       data: {
         ready: true,
+        masterSpreadsheetUrl: openSyncMasterSpreadsheetUrl_(),
         operationsSpreadsheetId: id,
         operationsSpreadsheetUrl: 'https://docs.google.com/spreadsheets/d/' + id + '/edit',
         productMappingSheetName: DB_SHEET_PRODUCT_MAPPING

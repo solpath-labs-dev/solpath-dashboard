@@ -790,6 +790,7 @@ action=syncOpenFull
 ```json
 {
   "ready": true,
+  "masterSpreadsheetUrl": "https://docs.google.com/spreadsheets/d/…/edit",
   "operationsSpreadsheetId": "…",
   "operationsSpreadsheetUrl": "https://docs.google.com/spreadsheets/d/…/edit",
   "productMappingSheetName": "product_mapping"
@@ -806,7 +807,7 @@ action=syncOpenFull
 }
 ```
 
-- `masterSpreadsheetUrl` — 원천 `SHEETS_MASTER_ID` 가 있을 때만(선택). **「상품 불러오기」** 주변 링크용.
+- `masterSpreadsheetUrl` — 원천 `SHEETS_MASTER_ID` 기준 URL(빈 문자열 수 있음). `ready: true`일 때도 내려 **원천/운영 둘 다** 「시트로 열기」 링크에 씀.
 - `reason` — 문자열 코드로 통일 (`NO_OPERATIONS_SHEET` | …).
 
 #### 2.3.2 `GET` `productMappingList` (JSONP)
