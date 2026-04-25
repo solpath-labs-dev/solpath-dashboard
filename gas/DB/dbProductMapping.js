@@ -490,8 +490,7 @@ function dbProductMappingApply_(inputRows) {
         ok: false,
         error: {
           code: 'PM_BAD_INTERNAL',
-          message:
-            '내부 대분류를 저장할 수 없습니다(솔패스·솔루틴·챌린지·교재·자소서·미분류만 가능). 자소서 등이 막히면 GAS를 최신으로 배포했는지 담당자에게 확인하세요.'
+          message: '내부 대분류를 저장할 수 없습니다. 화면에서 대분류를 다시 고른 뒤 저장하세요.'
         }
       };
     }
@@ -505,8 +504,7 @@ function dbProductMappingApply_(inputRows) {
         ok: false,
         error: {
           code: 'PM_BAD_LIFECYCLE',
-          message:
-            '상태(진행·만료·테스트·(구)상품)를 저장할 수 없습니다. (구)상품 등이 막히는 경우는 GAS(구글 앱스 스크립트)가 옛배포인 경우가 많으니, 담당자에게 최신으로 다시 배포해 달라고 하세요.'
+          message: '상태를 저장할 수 없습니다. 화면에서 상태(진행·만료·테스트·(구)상품)를 다시 고른 뒤 저장하세요.'
         }
       };
     }
