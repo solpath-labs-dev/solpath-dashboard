@@ -140,6 +140,7 @@ function doPost(e) {
   if (action === 'syncOpenFull') {
     try {
       var data = dbSyncOpenAll();
+      data.spreadsheetUrl = openSyncMasterSpreadsheetUrl_();
       return openSyncJsonResponse_({ ok: true, data: data }, h);
     } catch (x) {
       return openSyncJsonResponse_(
@@ -160,6 +161,19 @@ function doPost(e) {
     },
     h
   );
+}
+
+/**
+ * Script Property `SHEETS_MASTER_ID` — 원천 DB 스프레드시트 편집 URL(프론트 확인 버튼).
+ * @return {string} 없으면 빈 문자열
+ */
+function openSyncMasterSpreadsheetUrl_() {
+  var id = PropertiesService.getScriptProperties().getProperty('SHEETS_MASTER_ID');
+  id = id != null ? String(id).trim() : '';
+  if (!id.length) {
+    return '';
+  }
+  return 'https://docs.google.com/spreadsheets/d/' + id + '/edit';
 }
 
 /**

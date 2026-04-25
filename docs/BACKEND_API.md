@@ -742,8 +742,18 @@ action=syncOpenFull&token=<SOLPATH_DASHBOARD_TOKEN>
 **Response 200** — `Content-Type: application/json`
 
 ```json
-{ "ok": true, "data": { "members": { "syncId": "…", "rows": 0 }, "products": { "syncId": "…", "rows": 0 }, "orders": { "syncId": "…", "orderRows": 0, "itemRows": 0 } } }
+{
+  "ok": true,
+  "data": {
+    "members": { "syncId": "…", "rows": 0 },
+    "products": { "syncId": "…", "rows": 0 },
+    "orders": { "syncId": "…", "orderRows": 0, "itemRows": 0 },
+    "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/<SHEETS_MASTER_ID>/edit"
+  }
+}
 ```
+
+`spreadsheetUrl` — `SHEETS_MASTER_ID` 가 있을 때만(없으면 빈 문자열). 프론트 **데이터 확인** 링크용.
 
 **오류** — HTTP는 대부분 200, 본문으로 구분.
 
