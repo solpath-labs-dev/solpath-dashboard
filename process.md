@@ -11,6 +11,7 @@
 - **Org** [solpath-labs-dev/solpath-dashboard](https://github.com/solpath-labs-dev/solpath-dashboard) 생성 후 `mirror` remote → `main` push
 - `main` 기본 upstream은 `origin/main` (이후 커밋마다 `git push origin main && git push mirror main` 패턴 유지)
 - **clasp**: `clasp list`로 `solpath-dashboard-b…` 식별 → `clasp clone <scriptId> --rootDir gas` → 루트 `.clasp.json` + `gas/` (`clasp status`·`clasp push` 정상). [gas/README.md](./gas/README.md) 추가 (README는 GAS 업로드 대상 아님 · Untracked).
+- **API 명세 MD**: [docs/BACKEND_API.md](./docs/BACKEND_API.md) 신설 — 아임웹(소비) / 자체 Web App(제공) 구분, 메서드·요청·응답 JSON·오류 규칙·엔드포인트 표(실측으로 채울 칸 포함).
 
 ### 오늘의 전제
 
