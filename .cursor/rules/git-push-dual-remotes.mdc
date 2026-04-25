@@ -1,0 +1,17 @@
+---
+description: Git push — 항상 개인(origin) + Organization(mirror) 둘 다
+alwaysApply: true
+---
+
+# Git 푸시 (이 워크스페이스)
+
+사용자가 **깃에 올린다 / 푸시 / push** 라고 하면 **한 원격만이 아니라 둘 다** 갱신할 것.
+
+| 레포 | `origin` (개인) | `mirror` (Organization) |
+|------|-----------------|-------------------------|
+| 루트 `solpath-dashboard` | `eunsang9597/solpath-dashboard` | `solpath-labs-dev/solpath-dashboard` |
+| `front/` `solpath-dashboard-front` | `eunsang9597/solpath-dashboard-front` | `solpath-labs-dev/solpath-dashboard-front` |
+
+- 기본 브랜치: `main` (다른 브랜치를 명시하지 않으면 `main`).
+- 순서: `git push origin main` 후 `git push mirror main` (또는 필요 시 한 번에 두 번 실행).
+- 사용자가 **한쪽만** 올리라고 하면 그때만 예외.
