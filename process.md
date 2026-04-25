@@ -2,6 +2,22 @@
 
 매일 작업한 내용을 날짜별로 남겨 **"어디까지 했지?" "오늘 뭐 해야 하지?"** 를 즉시 추적할 수 있게 합니다.
 
+## 2026-04-25 — 백엔드 문서: Web App·시트·JSONP 정리
+
+### 오늘 한 일 (문서)
+
+- [docs/GAS_WEBAPP_SHEETS.md](./docs/GAS_WEBAPP_SHEETS.md) 신설 — Web App 배포(Anyone+Me), `TextOutput`·CORS 불가, 브라우저 **JSONP**·`POST` 역할, `getRange(row,col,**numRows**,numCols)` (102/103 불일치 원인), `dbSetValuesFromRow2_`, 트러블슈팅 표.
+- [docs/BACKEND_API.md](./docs/BACKEND_API.md) §2 — 위 내용과 맞게 `GET` JSONP 표·`POST` 설명·변경 이력 한 줄 보강.
+- [gas/README.md](./gas/README.md) — `Code.js` / `HttpOpenSync.js` 한 줄 설명 갱신.
+
+※ 프론트 레포(`solpath-dashboard-front`)는 이번 라운드에서 경로만 링크로 연결; 코드 변경 없으면 스니펫 커밋은 선택.
+
+### 관련 커밋 (이미 반영된 구현)
+
+- GAS: `HttpOpenSync` JSONP·`setHeader` 제거, `dbSheets` `getRange` numRows 수정 등 — 레포 `main` 히스토리 참고.
+
+---
+
 ## 2026-04-25 — 재개: Properties 완료 → GitHub ⓪부터
 
 ### 오늘 한 일 (⓪ 이 워크스페이스에서 완료)

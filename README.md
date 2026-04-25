@@ -138,6 +138,7 @@ flowchart LR
 
 - [docs/SPEC.md](./docs/SPEC.md) — 정본 명세 (기능·데이터 모델·규칙)
 - [docs/BACKEND_API.md](./docs/BACKEND_API.md) — HTTP 계약 (아임웹 연동 + 자체 Web App 요청/응답·오류)
+- [docs/GAS_WEBAPP_SHEETS.md](./docs/GAS_WEBAPP_SHEETS.md) — GAS Web App 배포·JSONP·CORS·시트 `getRange`/`setValues` (운영 트러블슈팅)
 - [process.md](./process.md) — 일일 작업 로그 · 변경 이력 · 사전 준비 · GAS 원천 동기화 규정(주문·속성)
 - [gas/README.md](./gas/README.md) — `clasp` / `gas/` 푸시
 
