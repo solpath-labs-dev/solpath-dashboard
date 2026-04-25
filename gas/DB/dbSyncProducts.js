@@ -42,9 +42,7 @@ function dbSyncProductsOnePage() {
     var sh = dbGetOrCreateSheetWithHeaders_(ss, DB_SHEET_PRODUCTS, DB_PRODUCTS_HEADERS);
     var w = DB_PRODUCTS_HEADERS.length;
     dbClearDataRows2Plus_(sh, w);
-    if (out.length) {
-      sh.getRange(2, 1, 1 + out.length, w).setValues(out);
-    }
+    dbSetValuesFromRow2_(sh, out, w);
     rows = out.length;
     msg = 'page1 snapshot, rows=' + rows;
   } catch (e) {

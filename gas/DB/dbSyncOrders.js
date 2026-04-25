@@ -74,12 +74,8 @@ function dbSyncOrdersOpen() {
     var wI = DB_ORDER_ITEMS_HEADERS.length;
     dbClearDataRows2Plus_(shO, wO);
     dbClearDataRows2Plus_(shI, wI);
-    if (allOrders.length) {
-      shO.getRange(2, 1, 1 + allOrders.length, wO).setValues(allOrders);
-    }
-    if (allItems.length) {
-      shI.getRange(2, 1, 1 + allItems.length, wI).setValues(allItems);
-    }
+    dbSetValuesFromRow2_(shO, allOrders, wO);
+    dbSetValuesFromRow2_(shI, allItems, wI);
     rO = allOrders.length;
     rI = allItems.length;
     msg = 'orders=' + rO + ' order_items=' + rI;

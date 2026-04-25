@@ -63,3 +63,28 @@ function dbClearDataRows2Plus_(sheet, nCols) {
   }
   sheet.getRange(2, 1, lr, nCols).clearContent();
 }
+
+/**
+ * 1행=헤더, 2행부터 values 붙이기. 끝 행 = 1 + values.length (2…1+n행 = n행).
+ * 열은 nCols에 맞게 패딩 — 가변 길이 행·setHeader 오해로 생기는 102/103 불일치 방지
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+ * @param {any[][]|null|undefined} values
+ * @param {number} nCols
+ */
+function dbSetValuesFromRow2_(sheet, values, nCols) {
+  if (!values || !values.length) {
+    return;
+  }
+  var n = values.length;
+  var norm = [];
+  var i, c;
+  for (i = 0; i < n; i++) {
+    var row = values[i] || [];
+    var line = [];
+    for (c = 0; c < nCols; c++) {
+      line.push(c < row.length ? row[c] : '');
+    }
+    norm.push(line);
+  }
+  sheet.getRange(2, 1, 1 + n, nCols).setValues(norm);
+}

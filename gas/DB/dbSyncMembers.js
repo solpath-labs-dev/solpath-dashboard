@@ -55,9 +55,7 @@ function dbSyncMembersOpen() {
     var sh = dbGetOrCreateSheetWithHeaders_(ss, DB_SHEET_MEMBERS, DB_MEMBERS_HEADERS);
     var w = DB_MEMBERS_HEADERS.length;
     dbClearDataRows2Plus_(sh, w);
-    if (all.length) {
-      sh.getRange(2, 1, 1 + all.length, w).setValues(all);
-    }
+    dbSetValuesFromRow2_(sh, all, w);
     rows = all.length;
     msg = 'members snapshot rows=' + rows;
   } catch (e) {
