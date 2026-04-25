@@ -8,14 +8,23 @@
 
 /**
  * CORS(브라우저 fetch).
+ * `Access-Control-Allow-Origin: *` 는 `credentials: 'include'` POST 와 **함께 쓸 수 없음** →
+ *   임웹/분석(imdog) 등이 쿠키·자격 붙이면 200이어도 CORS에 막힌다.
+ * Script Properties `CORS_ALLOW_ORIGIN` (선택) — 비우면 `https://www.solpath.co.kr` (apex는 속성에 `https://solpath.co.kr` 등으로 지정)
  * @return {Object<string,string>}
  */
 function openSyncCorsHeaders_() {
+  var p = PropertiesService.getScriptProperties();
+  var o = p.getProperty('CORS_ALLOW_ORIGIN');
+  o = o != null && String(o).trim().length ? String(o).trim() : 'https://www.solpath.co.kr';
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': o,
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Requested-With',
-    'Access-Control-Max-Age': '3600'
+    'Access-Control-Allow-Headers':
+      'Content-Type, X-Requested-With, Authorization, Traceparent, Baggage, Sentry-Trace, Request-Id',
+    'Access-Control-Max-Age': '3600',
+    'Vary': 'Origin'
   };
 }
 
