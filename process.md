@@ -12,6 +12,8 @@
 - `main` 기본 upstream은 `origin/main` (이후 커밋마다 `git push origin main && git push mirror main` 패턴 유지)
 - **clasp**: `clasp list`로 `solpath-dashboard-b…` 식별 → `clasp clone <scriptId> --rootDir gas` → 루트 `.clasp.json` + `gas/` (`clasp status`·`clasp push` 정상). [gas/README.md](./gas/README.md) 추가 (README는 GAS 업로드 대상 아님 · Untracked).
 - **API 명세 MD**: [docs/BACKEND_API.md](./docs/BACKEND_API.md) 신설 — 아임웹(소비) / 자체 Web App(제공) 구분, 메서드·요청·응답 JSON·오류 규칙·엔드포인트 표(실측으로 채울 칸 포함).
+- **Ground API 점검·정리** (같은 날 후속): Site-Info / OAuth2 / Member / Product(목록·단건·옵션)까지 명세 반영. §1.2에 **인벤토리 표** 추가, §3 변경 이력 **압축**, 주문은 **레거시 `/v2/shop` 스텁**만 명시. 실측 스모크 `gas/testapi.js` (`testImwebOpenApiSmoke`). §2 표에 스모크용 선택 키 `IMWEB_UNIT_CODE`·`IMWEB_SMOKE_PROD_NO`·`IMWEB_SMOKE_OPTION_CODE` 추가.
+- **토큰** `gas/imwebAuth.js`: **openapi** 는 OAuth2(`POST /oauth2/token`의 `accessToken`)만 Bearer. 쇼핑몰 `v2/auth` 토큰은 openapi 에서 30101. §2 Properties 표 참고.
 
 ### 오늘의 전제
 
@@ -30,6 +32,8 @@
 
 - [x] ⓪ 레포 생성·로컬 git·양쪽 push (2026-04-25, 이 폴더 기준)
 - [x] `gas/`·루트 `.clasp.json` — `clasp clone`·`clasp status` / `clasp push` 확인 (2026-04-25, `solpath-dashboard-b…`)
+- [ ] `testImwebOpenApiSmoke` 실run → 로그·`rawText`/`json` 저장 후 BACKEND_API·SPEC 필드 표와 대조 (토큰·unitCode 준비)
+- [ ] 실run 만족 후 **git** 커밋·`origin`/`mirror` push (사용자 일정)
 - [ ] 주문(및 품목) API **샘플 JSON** 저장·대조 후 §3.3 / §5.1.1 / GAS 매핑 1:1 점검
 - [ ] A→B→C→D 한 사이클 후 **전 구간·청크 실run** + §2 Properties 키 표와 구현 동기화
 
@@ -187,12 +191,19 @@
 
 | 키                         | 용도                                                                                 | 설정 시점                |
 | ------------------------- | ---------------------------------------------------------------------------------- | -------------------- |
-| `IMWEB_CLIENT_ID`         | 아임웹 앱 Client ID                                                                    | 아임웹 앱 생성 직후          |
-| `IMWEB_CLIENT_SECRET`     | 아임웹 앱 Client Secret                                                                | 아임웹 앱 생성 직후          |
-| `IMWEB_SITE_CODE`         | 테스트 사이트 연동 시 받는 siteCode                                                           | 사이트 연동 콜백 수신 시 자동 저장 |
-| `IMWEB_ACCESS_TOKEN`      | API 호출용 액세스 토큰                                                                     | Auth.gs가 자동 발급/갱신    |
-| `IMWEB_REFRESH_TOKEN`     | 토큰 갱신용                                                                             | Auth.gs가 자동 발급/갱신    |
-| `IMWEB_TOKEN_EXPIRES_AT`  | 액세스 토큰 만료 타임스탬프 (ms)                                                               | Auth.gs가 자동 업데이트     |
+| `IMWEB_CLIENT_ID`         | 개발자센터 Client ID — **Open API OAuth 필수**                                           | 개발자센터 앱                |
+| `IMWEB_CLIENT_SECRET`   | Client Secret — **Open API OAuth 필수**                                                | 동시                   |
+| `IMWEB_REDIRECT_URI`      | OAuth 등록 Redirect URI — authorize·token 교환 시 동일 값 (`imwebAuth.js`만 사용)          | 개발자센터 앱                |
+| `IMWEB_SITE_CODE`         | `GET /oauth2/authorize` 쿼리 **siteCode**(쇼핑몰 사이트 코드)                          | 운영자 확인                |
+| `IMWEB_OAUTH_ACCESS_TOKEN` | Open API Bearer — `imwebExchangeOAuthCode` / refresh 후 **자동 저장**                  | `imwebAuth.js`            |
+| `IMWEB_OAUTH_REFRESH_TOKEN` | OAuth refresh — 자동 저장                                                           | `imwebAuth.js`            |
+| `IMWEB_OAUTH_EXPIRES_AT`  | **미사용** — 토큰 저장 시 삭제만 함(예전 값 정리). 만료로 `/oauth2/token` 생략하지 않음 | `imwebAuth.js`            |
+| `IMWEB_API_KEY`           | (레거시) 쇼핑몰 외부연동 Key — **openapi 호출에는 사용 안 함** (`v2/auth` ≠ Ground 토큰)     | 다른 연동 시만              |
+| `IMWEB_SECRET_KEY`        | 위 짝 Secret — openapi 미사용                                                            | 동시                   |
+| `IMWEB_SCOOP`             | OAuth 인가 `scope` 쿼리(공백 구분). `imwebBuildOAuthAuthorizeUrl()` — 인자 없을 때 **필수**            | OAuth 인가 전               |
+| `IMWEB_UNIT_CODE`         | (선택) 스모크·API 쿼리 `unitCode`. 없으면 해당 쿼리에서 생략                                      | 필요 시                   |
+| `IMWEB_SMOKE_PROD_NO`     | `testapi.js` 상품·옵션 경로의 `prodNo`(**목록 응답에서 추출하지 않음**)                        | 스모크 시                  |
+| `IMWEB_SMOKE_OPTION_CODE` | `testapi.js` 옵션 단건 경로의 `optionCode`(**목록 응답에서 추출하지 않음**)                     | 스모크 시                  |
 | `SHEETS_MASTER_ID`        | 마스터 스프레드시트 ID                                                                      | 마스터 시트 생성 직후         |
 | `SHEETS_BACKUP_FOLDER_ID` | 주간 백업 저장 폴더 ID                                                                     | Phase 6              |
 | `NOTIFY_ERROR_EMAIL`      | 에러 알림 수신 이메일                                                                       | Phase 1              |

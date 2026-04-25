@@ -1,15 +1,12 @@
 /**
- * 대시보드(프론트) — Open API **전체** 시트 스냅샷. Web App `POST` + CORS.
- * 구현: `dbSyncOpenAll()` = members → products(1p) → orders
+ * 대시보드 — Open API 전체 시트 스냅샷. Web App POST + CORS.
+ * dbSyncOpenAll() = members → products(1p) → orders
  *
- * Script Property `SOLPATH_DASHBOARD_TOKEN` (비어 있으면 401) — `fetch` `token` 필드와 동일.
- * 본문: `application/x-www-form-urlencoded` (프리플라이트·CORS 단순화) — `action`, `token`
+ * 본문: application/x-www-form-urlencoded — `action` 만 (ping | syncOpenFull)
  */
 
-var PROP_DASHBOARD_SYNC_TOKEN = 'SOLPATH_DASHBOARD_TOKEN';
-
 /**
- * CORS(브라우저 `fetch` from jsDelivr / 아임웹).
+ * CORS(브라우저 fetch).
  * @return {Object<string,string>}
  */
 function openSyncCorsHeaders_() {
@@ -51,27 +48,27 @@ function openSyncApplyHeaders_(out, httpHeaders) {
   }
 }
 
-function openSyncGetTokenFromRequest_(e) {
+/**
+ * @param {Object} e
+ * @return {string}
+ */
+function openSyncGetActionFromRequest_(e) {
   e = e || {};
   var p = e.parameter || {};
   var action = p.action != null ? String(p.action).trim() : '';
-  var token = p.token != null ? String(p.token).trim() : '';
-  if (action.length || token.length) {
-    return { action: action, token: token };
+  if (action.length) {
+    return action;
   }
   var post = e.postData;
   if (!post || post.contents == null) {
-    return { action: '', token: '' };
+    return '';
   }
   var ct = post.type != null ? String(post.type) : '';
   if (ct.length && ct.indexOf('application/x-www-form-urlencoded') < 0) {
-    return { action: '', token: '' };
+    return '';
   }
   var q = openSyncParseFormUrlEncoded_(String(post.contents));
-  return {
-    action: q.action != null ? String(q.action).trim() : '',
-    token: q.token != null ? String(q.token).trim() : ''
-  };
+  return q.action != null ? String(q.action).trim() : '';
 }
 
 /**
@@ -99,43 +96,21 @@ function openSyncParseFormUrlEncoded_(body) {
 }
 
 /**
- * @param {string} token
- * @return {boolean}
- */
-function openSyncValidateToken_(token) {
-  if (!token || !String(token).length) {
-    return false;
-  }
-  var s = PropertiesService.getScriptProperties().getProperty(PROP_DASHBOARD_SYNC_TOKEN);
-  s = s != null ? String(s).trim() : '';
-  if (!s.length) {
-    return false;
-  }
-  return token === s;
-}
-
-/**
  * @param {Object} e
  */
 function doPost(e) {
   var h = openSyncCorsHeaders_();
   var action = '';
-  var token = '';
   try {
-    var parsed = openSyncGetTokenFromRequest_(e);
-    action = parsed.action;
-    token = parsed.token;
+    action = openSyncGetActionFromRequest_(e);
   } catch (err) {
     return openSyncJsonResponse_(
       { ok: false, error: 'BAD_REQUEST', message: err && err.message != null ? String(err.message) : String(err) },
       h
     );
   }
-  if (!openSyncValidateToken_(token)) {
-    return openSyncJsonResponse_({ ok: false, error: 'UNAUTHORIZED' }, h);
-  }
   if (action === 'ping') {
-    return openSyncJsonResponse_({ ok: true, data: { name: 'openSync', version: 1, actions: ['ping', 'syncOpenFull'] } }, h);
+    return openSyncJsonResponse_({ ok: true, data: { name: 'openSync', version: 2, actions: ['ping', 'syncOpenFull'] } }, h);
   }
   if (action === 'syncOpenFull') {
     try {
@@ -164,8 +139,7 @@ function doPost(e) {
 }
 
 /**
- * Script Property `SHEETS_MASTER_ID` — 원천 DB 스프레드시트 편집 URL(프론트 확인 버튼).
- * @return {string} 없으면 빈 문자열
+ * @return {string}
  */
 function openSyncMasterSpreadsheetUrl_() {
   var id = PropertiesService.getScriptProperties().getProperty('SHEETS_MASTER_ID');
@@ -177,7 +151,7 @@ function openSyncMasterSpreadsheetUrl_() {
 }
 
 /**
- * CORS preflight(환경·배포에 따라 호출). 본 응답 body 없이 헤더만.
+ * CORS preflight
  */
 function doOptions() {
   return openSyncTextResponse_('', openSyncCorsHeaders_());

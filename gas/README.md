@@ -33,7 +33,7 @@ clasp open
 - `.gs` / `.js` — Apps Script 소스 (clasp가 `gas/` 아래 동기화)
 - `appsscript.json` — 타임존, OAuth 스코프, 런타임 등 (편집 시 주의)
 - `Code.js` — Web App `doGet` + `?code=` → `imwebExchangeByCodeAndStore_` → Properties `IMWEB_OAUTH_*` (`apiTest.js`)
-- `HttpOpenSync.js` — Web App `doPost` / `doOptions`: 대시보드 `action=ping` · `syncOpenFull` (토큰 `SOLPATH_DASHBOARD_TOKEN`) → `dbSyncOpenAll`. `fetch`+CORS → [docs/BACKEND_API.md](../docs/BACKEND_API.md) §2.2
+- `HttpOpenSync.js` — Web App `doPost` / `doOptions`: 대시보드 `action=ping` · `syncOpenFull` (본문 `action`만) → `dbSyncOpenAll`. `fetch`+CORS → [docs/BACKEND_API.md](../docs/BACKEND_API.md) §2.2
 - `apiTest.js` — `imwebApiTestAll` Run: OAuth(인가 URL 로그, code·refresh·code₂ POST) → `GET /site-info`·members·products·옵션 체인. 응답은 `Logger`에 `http`+본문 그대로. **파일 주석**에 필요한 Properties 키 있음
 - `RunOpenSync.js` — [실행]용 진입점만 모음. 드롭다운이 **열려 있는 파일** 기준이면 이 파일을 연 뒤 `run_OpenSync_Members` / `run_OpenSync_Products` / `run_OpenSync_Orders` / `run_OpenSync_All` 실행.
 - `DB/` — Open API → 시트 ([docs/BACKEND_API.md](../docs/BACKEND_API.md)). **본문:** `dbSyncMembersOpen`·`dbSyncProductsOnePage`·`dbSyncOrdersOpen`·`dbSyncOpenAll`은 각 `dbSyncMembers.js` / `dbSyncProducts.js` / `dbSyncOrders.js`. `dbSetupMasterDatabase` → `dbMasterSetup.js`. `SHEETS_MASTER_ID` 비우고 `dbSetupMasterDatabase` 다시 → 새 헤더. (원격에 `DB`가 없고 `RunOpenSync`에서 `ReferenceError`면 `clasp push`.)
