@@ -822,7 +822,7 @@ action=syncOpenFull
     {
       "prod_no": 12345,
       "product_name": "…",
-      "product_name_display": "… 12자 컷 + …",
+      "product_name_display": "… 20자 컷 + …",
       "internal_category": "unmapped",
       "lifecycle": "active",
       "notes": "",
