@@ -5,16 +5,10 @@ alwaysApply: true
 
 # Git 푸시 (이 워크스페이스)
 
-## 로컬 디렉터리(고정) — **터미널·에이전트가 헷갈리면 이 구조로만 본다**
+## 로컬 디렉터리(고정)
 
-- **부모** (예: `.../솔루션편입/`) **한 겹 아래**에, 아래가 **서로 옆(형제)**에 있다.  
-  - **`통계자료마스터/`** — 이 Cursor 워크스페이스. `gas/`, `docs/`, `front/`(동기·스니펫·핀)이 있는 **메타 레포** 트리.  
-  - **`solpath-dashboard-front/`** — 임웹·jsDelivr가 가져가는 **실제 프론트** (`css/`, `js/`, `index.html` 루트) — **Git은 여기(별도 클론)**.  
-  - **백엔드/기타** — 팀이 쓰는 별도 레포가 **같은 부모**에 **또** 옆에 둔다(메타 `통계자료마스터` **안**에 박혀 있지 **않음**).
-- **절대 혼동 금지**  
-  - `통계자료마스터/front/` = 메타 쪽 **작업/복제본**. **원격 `solpath-dashboard-front`에 `git push`가 나가는 루트**가 아님.  
-  - 프론트 `origin`+`mirror` 푸시·`git rev-parse HEAD`(핀에 넣는 SHA) = **`../solpath-dashboard-front`**(메타 **루트**에서의 상대)에서 실행한 결과가 **정본**이다.  
-- 메타 루트(통계자료마스터) ≠ 프론트 루트(형제). 에이전트는 “이 워크스페이스 루트”와 “형제 `-front`”를 **따로** `cd`해 구분한다.
+- **`통계자료마스터/`** = 이 워크스페이스 = Git 원격 **`solpath-dashboard`** (개인 `origin` + Org `mirror`). **`front/`** 는 이 레포 안에서 추적·푸시한다 (`.gitignore` `!` 규칙).
+- **형제 `solpath-dashboard-front/`** — 레거시·팀이 **별도 레포**로만 쓸 때. **현재 임웹 jsDelivr 정본은 아래 §모노레포 경로** (`…/solpath-dashboard@<sha>/front/…`).
 
 ---
 
@@ -29,33 +23,34 @@ alwaysApply: true
 - 순서: `git push origin main` 후 `git push mirror main` (또는 필요 시 한 번에 두 번 실행).
 - 사용자가 **한쪽만** 올리라고 하면 그때만 예외.
 
-## 구조 (한 번에) — **폴더 = 형제, 한 레포 안이 아님**
+## 구조 (한 번에) — **임웹 jsDelivr = 모노레포 `solpath-dashboard` + `/front/`**
 
-| 무엇 | 어디(로컬) |
-|------|------------|
-| GAS, `gas/`, 문서, 메타 `front/`·스니펫 | **`.../솔루션편입/통계자료마스터`** (이 워크스페이스) |
-| 임웹·jsDelivr `css/`, `js/`, `index.html` | **형제** **`.../솔루션편입/solpath-dashboard-front`** (별도 git) |
-| 원격(각) | `origin` + `mirror` **둘 다** (아래 GitHub 표) |
+| 무엇 | 어디 |
+|------|------|
+| 소스·스니펫·핀 | 이 레포 `front/` (워크스페이스 루트에서 `git`) |
+| jsDelivr URL 패턴 | `https://cdn.jsdelivr.net/gh/eunsang9597/solpath-dashboard@<풀SHA>/front/css/styles.css` 동일 방식으로 `…/front/js/app.js`, iframe은 `…/front/index.html` |
+| Org 미러 | `solpath-labs-dev/solpath-dashboard` 동일 `@sha`/`/front/` (apply 스크립트가 org 치환 지원) |
 
-- **자동 동기** 없음. 메타 `front/`를 고쳤으면 **그걸** 형제에 **반영(rsync 등)** → 형제 `commit` → `git push origin main` → `git push mirror main` → **아래 §「프론트 직전 배포」**로 `SOLPATH`→`apply`→메타 push.
+- **레거시**: 별도 레포 `solpath-dashboard-front` 루트에만 올리던 방식 — `apply`가 `-front@` URL도 치환 가능. **새 작업은 모노 `@sha/front/…` 를 정본으로 둔다.**
 
 ## CDN / `SOLPATH_CDN_COMMIT` / 스니펫이 하는 일
 
-- **배포(소스가 올라가는 것)가 아님.** jsDelivr URL은 `solpath-dashboard-front` **이미 푸시된 커밋**을 가리킬 **주소**만 맞춤.
-- 모노레포의 `IMWEB_SNIPPET*.html` / `SOLPATH_CDN_COMMIT` / `apply-solpath-cdn-pin.sh` = **“어느 커밋을 볼지”**만 통일. **프론트 코드를 CDN에 “올리는” 동작이 아님.**
+- GitHub에 **이미 푸시된** `solpath-dashboard` 커밋을 jsDelivr가 **경로로** 읽게 할 **주소**만 맞춤.
+- `SOLPATH_CDN_COMMIT` + `apply-solpath-cdn-pin.sh` + `IMWEB_*.html` = **한 세트**(풀 SHA·`cdnCommit`·주석 `SOLPATH_PIN` 동기).
 
-## 프론트 “직전 배포” 정본 순서 (이것만 쓴다) — **역전·병렬 금지**
+## 프론트 배포 정본 순서 (다음에도 **이 순서만**) — **역전·병렬 금지**
 
-과거에 꼬였던 원인: **`SOLPATH_CDN_COMMIT` 쓰기**와 **`apply-solpath-cdn-pin.sh`**·다른 `write`를 **한 턴에 겹쳐** 스니펫이 **옛 SHA**에 남음. **한 단계씩**, 아래 **순서대로만** 한다.
+꼬임 원인: **`SOLPATH` 쓰기**와 **`apply`**·`IMWEB_*` **동시** 편집 → 스니펫 **옛 SHA** 잔상.
 
-1. (메타) `front/` → (형제) `solpath-dashboard-front` — **`rsync -a`**, `**.git` 제외** (또는 동일 효과의 복사).
-2. **형제**에서 `git add`·`commit` (필요 시) → **`git push origin main`** → **`git push mirror main`**.
-3. **핀 SHA 확정(임웹·jsDelivr = 브라우저가 읽는 js/css·index가 담긴 커밋)**  
-   - 보통: 형제에서 **`git rev-parse HEAD`** (풀 SHA).  
-   - **예외(History가 2갈래로 잡힐 때)**: -front `HEAD`가 “스니펫/핀 파일만” 정리한 **후속** 커밋이고, **임웹이 따라가야 할 js/css**는 **그 이전** 커밋이면, `SOLPATH_CDN_COMMIT`에는 **그 “코드 커밋” 풀 SHA**를 넣는다. (`deploy` 시 `SOLPATH_PIN_SHA=짧은해시_또는_풀`로 지정)
-4. **(메타)** `front/SOLPATH_CDN_COMMIT` **파일만 먼저** 최종 SHA 한 줄(주석+본문)로 **완성**한다. **이 단계에서 `IMWEB_*.html`을 손대지 않는다(apply 전이면).**
-5. **그다음에만** (메타 루트에서) **`bash front/scripts/apply-solpath-cdn-pin.sh`** — 이 스크립트가 `IMWEB_SNIPPET_*.html`의 `@<sha>`를 `SOLPATH_CDN_COMMIT`과 **일치**시킨다.
-6. (메타) `git add` — `front/SOLPATH_CDN_COMMIT`, `front/IMWEB_SNIPPET_INJECT.html`, `front/IMWEB_SNIPPET.html` (필요 시 **`-f`**, `.gitignore`는 변경 있을 때) → `commit` → **`git push origin main`** → **`git push mirror main`**.
+1. **`front/`** 에서 JS/CSS/HTML 수정.
+2. 워크스페이스 루트에서 **`git add` → `commit` → `git push origin main` → `git push mirror main`** (둘 다).
+3. **핀용 풀 SHA 확정** — 브라우저가 실제로 받아야 할 **`solpath-dashboard` 커밋**  
+   - 보통: 방금 에셋이 들어간 커밋 = **`git rev-parse HEAD`** (풀).  
+   - **스니펫·핀만** 한 커밋 더 올린 뒤면: 임웹이 따라갈 **js/css가 들어 있는 커밋** 풀 SHA를 `SOLPATH_CDN_COMMIT`에 넣는다 (HEAD가 아닐 수 있음).
+4. **`front/SOLPATH_CDN_COMMIT`만** 그 풀 SHA로 **먼저** 저장 (`apply` **전**에 `IMWEB_*` 수동 수정 금지).
+5. **`bash front/scripts/apply-solpath-cdn-pin.sh`** — URL·`cdnCommit`·`SOLPATH_PIN` 주석 일괄.
+6. **`git add`** `front/SOLPATH_CDN_COMMIT`, `front/IMWEB_SNIPPET_INJECT.html`, `front/IMWEB_SNIPPET.html` → **`commit` → `push origin` + `push mirror`**.
+7. **임웹**에 `IMWEB_SNIPPET_INJECT.html` **전체** 다시 붙넣기. Network에서 `app.js`가 **`@` 동일 풀 SHA**인지 확인.
 
 - **`@main`** 쓰지 않는다(캐시·시점). **풀 SHA 핀** 유지.
 - **절대 금지**: `apply` **도는 도중**에 `SOLPATH_CDN_COMMIT`을 **다시** 덮쓰기, 에이전트가 **다른** 도구로 `IMWEB_*.html` **동시** 편집, `병렬` 실행. 꼬이면 **(4)~(5)를 처음부터** 다시.
