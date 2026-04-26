@@ -1,5 +1,5 @@
 /**
- * 매출·구매 인원(품목 줄) 지표 — GAS JSONP
+ * 매출·구매 건수 지표 — GAS JSONP
  */
 import { GAS_BASE_URL, GAS_MODE } from './config.js';
 import {
@@ -1467,7 +1467,7 @@ export function initAnalytics(mount) {
       for (mc = 1; mc <= 12; mc++) {
         tHH += '<th scope="col">' + mc + '월</th>';
       }
-      tHH += '<th class="sp-an-viz__sum-col" scope="col">연 합(품목 줄)</th></tr>';
+      tHH += '<th class="sp-an-viz__sum-col" scope="col">연 합(구매)</th></tr>';
       const nowL = new Date();
       const yNow0 = nowL.getFullYear();
       const mNow0 = nowL.getMonth() + 1;
@@ -1491,7 +1491,7 @@ export function initAnalytics(mount) {
       el.peopleMatrix.innerHTML =
         '<p class="sp-an-viz__empty sp-an-people-matrix__caption">' +
         esc(String(useY)) +
-        '년 1~12월 품목 줄 수(같은 해·상품군·월별 합). 아직 지나지 않은 달은 비웁니다.</p>' +
+        '년 1~12월 구매 건수(상품군·월별 합). 아직 지나지 않은 달은 비웁니다.</p>' +
         '<table class="sp-an-viz-table sp-an-people__matrix"><thead>' +
         tHH +
         '</thead><tbody>' +
@@ -1539,14 +1539,14 @@ export function initAnalytics(mount) {
         useY +
         '년 ' +
         useM +
-        '월 — 품목 줄 수(한 주문 안의 품목 줄)입니다. 연도·월 합계 표는 아래를 펼쳐야 불러옵니다.';
+        '월 — 날짜별 구매 건수입니다. 연·월 합계 표는 아래를 펼쳐 불러옵니다.';
     }
     if (el.peopleGrid) {
       el.peopleGrid.innerHTML = '<p class="sp-an-viz__empty">불러오는 중…</p>';
     }
     if (el.peopleMatrix && (!el.peopleYearDetails || !el.peopleYearDetails.open)) {
       el.peopleMatrix.innerHTML =
-        '<p class="sp-an-viz__empty">연도·월·상품군 합계 표는 위 항목을 펼치면 이 자리에서 불러옵니다.</p>';
+        '<p class="sp-an-viz__empty">연도·월·상품군 구매 건수 표는 위 항목을 펼치면 이 자리에서 불러옵니다.</p>';
     }
     try {
       var rUse = /** @type {Object[]} */ ([]);
@@ -1626,7 +1626,7 @@ export function initAnalytics(mount) {
           esc(labH) +
           '</th>';
       }
-      theg += '<th class="sp-an-viz__sum-col sp-an-people__col--tot" scope="col">품목 줄 합(건)</th></tr>';
+      theg += '<th class="sp-an-viz__sum-col sp-an-people__col--tot" scope="col">구매 합(건)</th></tr>';
       const sumByCat = /** @type {Record<string, number>} */ ({});
       for (let si = 0; si < uniqueCats.length; si++) {
         sumByCat[String(uniqueCats[si])] = 0;
@@ -1667,9 +1667,9 @@ export function initAnalytics(mount) {
       }
       if (!pSorted.length) {
         const nc = 2 + daysN2 + (uniqueCats.length > 0 ? uniqueCats.length : 0) + 1;
-        tbG = '<tr><td colspan="' + nc + '" class="sp-an-viz__empty">이 달 품목 줄이 없습니다.</td></tr>';
+        tbG = '<tr><td colspan="' + nc + '" class="sp-an-viz__empty">이 달 집계된 구매 건수가 없습니다.</td></tr>';
       }
-      let sumB = '<tr class="sp-an-people__sumrow"><th scope="row">일 합(건)</th>';
+      let sumB = '<tr class="sp-an-people__sumrow"><th scope="row">일 합(구매)</th>';
       let ssum = 0;
       for (let d2 = 1; d2 <= daysN2; d2++) {
         const mma2 = useM < 10 ? '0' + useM : String(useM);
@@ -1706,7 +1706,7 @@ export function initAnalytics(mount) {
       }
     } catch (e) {
       if (el.peopleWarn) {
-        el.peopleWarn.textContent = '품목 줄 표를 그리지 못했습니다.';
+        el.peopleWarn.textContent = '구매 건수 표를 그리지 못했습니다.';
         el.peopleWarn.removeAttribute('hidden');
       }
     }
@@ -1735,7 +1735,7 @@ export function initAnalytics(mount) {
       if (!el.peopleYearDetails.open) {
         if (el.peopleMatrix) {
           el.peopleMatrix.innerHTML =
-            '<p class="sp-an-viz__empty">연도·월·상품군 합계 표는 위 항목을 펼치면 이 자리에서 불러옵니다.</p>';
+            '<p class="sp-an-viz__empty">연도·월·상품군 구매 건수 표는 위 항목을 펼치면 이 자리에서 불러옵니다.</p>';
         }
         return;
       }
