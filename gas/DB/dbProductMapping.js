@@ -72,7 +72,7 @@ function dbPmSeedProductMappingFromMaster_(opsSs, forceReseed) {
       continue;
     }
     var fromProductsName = String(line[idxName] != null ? line[idxName] : '').trim();
-    out.push([prodNo, fromProductsName, _DB_PM_DEFAULT_INTERNAL, _DB_PM_DEFAULT_LIFECYCLE, now, now, '']);
+    out.push([prodNo, fromProductsName, _DB_PM_DEFAULT_INTERNAL, _DB_PM_DEFAULT_LIFECYCLE, now, now, '', '']);
   }
   if (!out.length) {
     return 0;
@@ -390,6 +390,10 @@ function dbProductMappingList_() {
     var lifecycle = m && m.lifecycle ? m.lifecycle : 'active';
     var product_name = m && m.product_name && String(m.product_name).length ? m.product_name : fromProductsName;
     var notes = m && m.notes != null ? String(m.notes) : '';
+    var sales_end = m && m.sales_end != null ? String(m.sales_end).trim() : '';
+    if (sales_end.length > 10) {
+      sales_end = sales_end.slice(0, 10);
+    }
     var created_at = m && m.created_at != null ? String(m.created_at) : '';
     var updated_at = m && m.updated_at != null ? String(m.updated_at) : '';
     if (_DB_PM_CATEGORIES.indexOf(internal_category) < 0) {
@@ -406,6 +410,7 @@ function dbProductMappingList_() {
       internal_category: internal_category,
       lifecycle: lifecycle,
       notes: notes,
+      sales_end: sales_end,
       created_at: created_at,
       updated_at: updated_at
     });
@@ -423,7 +428,7 @@ function dbProductMappingList_() {
 }
 
 /**
- * @return {Object<string, { product_name: string, internal_category: string, lifecycle: string, notes: string, created_at: string, updated_at: string }>}
+ * @return {Object<string, { product_name: string, internal_category: string, lifecycle: string, notes: string, sales_end: string, created_at: string, updated_at: string }>}
  */
 function dbPmReadMappingMap_() {
   var o = {};
@@ -450,13 +455,18 @@ function dbPmReadMappingMap_() {
     if (!pk) {
       continue;
     }
+    var se = String(line[7] != null ? line[7] : '').trim();
+    if (se.length > 10) {
+      se = se.slice(0, 10);
+    }
     o[pk] = {
       product_name: String(line[1] != null ? line[1] : '').trim(),
       internal_category: String(line[2] != null ? line[2] : '').trim() || 'unmapped',
       lifecycle: String(line[3] != null ? line[3] : '').trim() || 'active',
       created_at: String(line[4] != null ? line[4] : ''),
       updated_at: String(line[5] != null ? line[5] : ''),
-      notes: String(line[6] != null ? line[6] : '')
+      notes: String(line[6] != null ? line[6] : ''),
+      sales_end: se
     };
   }
   return o;
@@ -472,6 +482,31 @@ function dbPmDisplayName20_(s) {
     return t;
   }
   return t.slice(0, 20) + '…';
+}
+
+/**
+ * @param {*} v
+ * @return {string} 빈 문자 또는 yyyy-MM-dd
+ */
+function dbPmNormalizeSalesEndCell_(v) {
+  if (v == null || v === '') {
+    return '';
+  }
+  if (v instanceof Date) {
+    if (isNaN(v.getTime())) {
+      return '';
+    }
+    return Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd');
+  }
+  var s = String(v).trim();
+  if (!s.length) {
+    return '';
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return s;
+  }
+  var ymd = dbAnAnyToSeoulYmd_(s);
+  return ymd && ymd.length >= 8 ? ymd : '';
 }
 
 /**
@@ -542,6 +577,30 @@ function dbProductMappingApply_(inputRows) {
     }
     var pname = String(row.product_name != null ? row.product_name : '').trim();
     var nnotes = String(row.notes != null ? row.notes : '');
+    var seIn = row.sales_end != null ? String(row.sales_end).trim() : '';
+    var seRaw = dbPmNormalizeSalesEndCell_(row.sales_end);
+    if (life === 'archived' || life === 'legacy') {
+      if (!seIn.length) {
+        return {
+          ok: false,
+          error: {
+            code: 'PM_SALES_END_REQUIRED',
+            message: '만료·(구)상품일 때는 판매 종료일(sales_end, yyyy-MM-dd)이 필요합니다. (상품 ' + pnum + ')'
+          }
+        };
+      }
+      if (!seRaw.length) {
+        return {
+          ok: false,
+          error: {
+            code: 'PM_BAD_SALES_END',
+            message: '판매 종료일 형식이 올바르지 않습니다. yyyy-MM-dd 로 입력하세요. (상품 ' + pnum + ')'
+          }
+        };
+      }
+    } else {
+      seRaw = '';
+    }
 
     var k = String(pnum);
     var rowIdx = indexByKey[k];
@@ -552,7 +611,7 @@ function dbProductMappingApply_(inputRows) {
         created0 = String(old[4]);
       }
     }
-    var line = [pnum, pname, ic, life, created0, now, nnotes];
+    var line = [pnum, pname, ic, life, created0, now, nnotes, seRaw];
     if (rowIdx) {
       sh.getRange(rowIdx, 1, 1, nCols).setValues([line]);
     } else {

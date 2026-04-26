@@ -188,7 +188,8 @@ function rowSig(r) {
     String(r.internal_category != null ? r.internal_category : '').trim(),
     String(r.lifecycle != null ? r.lifecycle : '').trim(),
     r.product_name,
-    r.notes != null ? String(r.notes) : ''
+    r.notes != null ? String(r.notes) : '',
+    String(r.sales_end != null ? r.sales_end : '').trim()
   ].join('\t');
 }
 
@@ -361,6 +362,18 @@ export function initProductMapping(mount) {
       const selLife = buildSelectLife(dataIdx, row2.lifecycle);
       const catN = normalizePmCategory_(row2.internal_category);
       const lifeN = normalizePmLifecycle_(row2.lifecycle);
+      let seVal = row2.sales_end != null ? String(row2.sales_end).trim() : '';
+      if (seVal.length > 10) {
+        seVal = seVal.slice(0, 10);
+      }
+      const showSe = lifeN === 'archived' || lifeN === 'legacy';
+      const seHtml = showSe
+        ? '<label class="sp-pm-sel__wrap sp-pm-sales-end-wrap"><span class="visually-hidden">판매 종료일</span><input type="date" class="sp-pm-sel sp-pm-sales-end" data-idx="' +
+          dataIdx +
+          '" value="' +
+          escAttr(seVal) +
+          '"/></label>'
+        : '';
       let rowLifeClass = '';
       if (catN !== 'unmapped') {
         if (lifeN === 'archived') {
@@ -383,6 +396,7 @@ export function initProductMapping(mount) {
           '</span>' +
           selCat +
           selLife +
+          seHtml +
           '</div>'
       );
     }
@@ -455,6 +469,9 @@ export function initProductMapping(mount) {
     el.sections.querySelectorAll('select.sp-pm-sel--life').forEach(function (se) {
       se.addEventListener('change', onSelectChange);
     });
+    el.sections.querySelectorAll('input.sp-pm-sales-end').forEach(function (inp) {
+      inp.addEventListener('change', onSalesEndChange);
+    });
     syncPmSelectsFromDom_();
   }
 
@@ -478,6 +495,13 @@ export function initProductMapping(mount) {
         return;
       }
       localRows[idx].lifecycle = normalizePmLifecycle_(se.value);
+    });
+    el.sections.querySelectorAll('input.sp-pm-sales-end').forEach(function (inp) {
+      const idx = parseInt(String(inp.getAttribute('data-idx') != null ? inp.getAttribute('data-idx') : ''), 10);
+      if (isNaN(idx) || idx < 0 || !localRows[idx]) {
+        return;
+      }
+      localRows[idx].sales_end = inp.value != null ? String(inp.value).trim() : '';
     });
   }
 
@@ -523,6 +547,23 @@ export function initProductMapping(mount) {
   /**
    * @param {Event} ev
    */
+  function onSalesEndChange(ev) {
+    const t = ev.target;
+    if (!(t instanceof HTMLInputElement) || !t.classList.contains('sp-pm-sales-end')) {
+      return;
+    }
+    const idx = t.getAttribute('data-idx');
+    if (idx == null) {
+      return;
+    }
+    const i = parseInt(idx, 10);
+    if (isNaN(i) || i < 0 || !localRows[i]) {
+      return;
+    }
+    localRows[i].sales_end = t.value != null ? String(t.value).trim() : '';
+    recomputeDirty();
+  }
+
   function onSelectChange(ev) {
     const t = ev.target;
     if (!(t instanceof HTMLSelectElement)) {
@@ -540,6 +581,12 @@ export function initProductMapping(mount) {
       localRows[i].internal_category = normalizePmCategory_(t.value);
     } else {
       localRows[i].lifecycle = normalizePmLifecycle_(t.value);
+      const lf = localRows[i].lifecycle;
+      if (lf !== 'archived' && lf !== 'legacy') {
+        localRows[i].sales_end = '';
+      }
+      render();
+      return;
     }
     recomputeDirty();
   }
@@ -593,6 +640,11 @@ export function initProductMapping(mount) {
         return emsg.error.message != null && String(emsg.error.message).length
           ? String(emsg.error.message)
           : '내부 대분류를 저장할 수 없습니다. 해당 줄에서 대분류를 다시 고른 뒤 저장하세요.';
+      }
+      if (c === 'PM_SALES_END_REQUIRED' || c === 'PM_BAD_SALES_END') {
+        return emsg.error.message != null && String(emsg.error.message).length
+          ? String(emsg.error.message)
+          : '만료·(구)상품은 판매 종료일(yyyy-MM-dd)이 필요합니다.';
       }
     }
     if (typeof emsg.error === 'string' && emsg.error.length) {
@@ -731,6 +783,11 @@ export function initProductMapping(mount) {
         const lr = localRows[j];
         lr.internal_category = normalizePmCategory_(lr.internal_category);
         lr.lifecycle = normalizePmLifecycle_(lr.lifecycle);
+        let se = lr.sales_end != null ? String(lr.sales_end).trim() : '';
+        if (se.length > 10) {
+          se = se.slice(0, 10);
+        }
+        lr.sales_end = se;
       }
       snapshotBaseline();
       try {
@@ -831,12 +888,20 @@ export function initProductMapping(mount) {
         const pnum = typeof pn === 'number' && !isNaN(pn) ? pn : parseInt(String(pn), 10);
         const ic0 = normalizePmCategory_(r.internal_category);
         const lf0 = normalizePmLifecycle_(r.lifecycle);
+        let se0 = r.sales_end != null ? String(r.sales_end).trim() : '';
+        if (se0.length > 10) {
+          se0 = se0.slice(0, 10);
+        }
+        if (lf0 !== 'archived' && lf0 !== 'legacy') {
+          se0 = '';
+        }
         dirty.push({
           prod_no: isNaN(pnum) ? pn : pnum,
           product_name: r.product_name,
           internal_category: ic0,
           lifecycle: lf0,
-          notes: r.notes != null ? String(r.notes) : ''
+          notes: r.notes != null ? String(r.notes) : '',
+          sales_end: se0
         });
       }
     }

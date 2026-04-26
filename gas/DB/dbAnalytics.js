@@ -241,36 +241,18 @@ function dbAnOpenOrThrow_() {
 }
 
 /**
- * 직전 `02_주문라인_실적`에서 사용만 붙이기(report_as, last_recognition_date, x_set) — **동기 전에** 읽음
- * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ssA
- * @return {Object<string, { report_as: string, last_recognition_date: *, x_set: boolean }>}
+ * 주문일 `yyyy-MM-dd`가 `sales_end` **다음 날 이후**이면 true (종료일 당일은 인정)
+ * @param {string} orderYmd
+ * @param {string} salesEndYmd
+ * @return {boolean}
  */
-function dbAnReadOrderLineUserFieldsMap_(ssA) {
-  var m = {};
-  if (!ssA) {
-    return m;
+function dbAnOrderYmdAfterSalesEndExclusive_(orderYmd, salesEndYmd) {
+  var y = orderYmd != null ? String(orderYmd).trim() : '';
+  var e = salesEndYmd != null ? String(salesEndYmd).trim() : '';
+  if (y.length < 8 || e.length < 8) {
+    return false;
   }
-  var sh = dbAnGetOrderLinesSheet_(ssA);
-  if (!sh || sh.getLastRow() < 2) {
-    return m;
-  }
-  var w = DB_ANALYTICS_ORDER_LINE_HEADERS.length;
-  var lr = sh.getLastRow();
-  var vals = sh.getRange(2, 1, lr, w).getValues();
-  var i;
-  for (i = 0; i < vals.length; i++) {
-    var r = vals[i] || [];
-    var k0 = dbAnLineKey_(r[0], r[2]);
-    if (!k0 || k0 === '\t') {
-      continue;
-    }
-    m[k0] = {
-      report_as: r[11] != null ? String(r[11]).trim() : '',
-      last_recognition_date: r[12],
-      x_set: r[13] === true || String(r[13]).toLowerCase() === 'true' || r[13] === 1
-    };
-  }
-  return m;
+  return y > e;
 }
 
 /**
@@ -357,7 +339,6 @@ function dbAnalyticsOrderLinesRebuildFromMaster_() {
   } catch (e1) {
     return { ok: false, error: { code: 'NO_ANALYTICS_SHEET', message: '집계·분석 시트가 없습니다. 먼저 준비합니다.' } };
   }
-  var merge = dbAnReadOrderLineUserFieldsMap_(ssA);
   var shO = master.getSheetByName(DB_SHEET_ORDERS);
   var orderMap = {};
   var orderToMember = {};
@@ -439,11 +420,6 @@ function dbAnalyticsOrderLinesRebuildFromMaster_() {
     }
     var lineNet = dbNumO_(L[9]) - dbNumO_(L[10]);
     var sec = String(L[4] != null ? L[4] : '');
-    var u = merge[dbAnLineKey_(L[0], ordNo)] || {
-      report_as: '',
-      last_recognition_date: '',
-      x_set: false
-    };
     out.push([
       L[0],
       L[1],
@@ -455,10 +431,7 @@ function dbAnalyticsOrderLinesRebuildFromMaster_() {
       sec,
       cat,
       life,
-      pkey && addByProd[pkey] != null && addByProd[pkey] !== undefined ? addByProd[pkey] : '',
-      u.report_as,
-      u.last_recognition_date,
-      u.x_set === true
+      pkey && addByProd[pkey] != null && addByProd[pkey] !== undefined ? addByProd[pkey] : ''
     ]);
   }
   var shOut = dbAnGetOrderLinesSheet_(ssA);
@@ -777,19 +750,6 @@ function dbAnalyticsResetAll_() {
 }
 
 /**
- * (y, m)의 **직전 달** (4월 `x` → 3월까지 인정)
- * @param {number} y
- * @param {number} m
- * @return {{ y: number, m: number }}
- */
-function dbAnPrevYearMonth_(y, m) {
-  if (m > 1) {
-    return { y: y, m: m - 1 };
-  }
-  return { y: y - 1, m: 12 };
-}
-
-/**
  * 주문(연,월)이 (a,b) **이전**이면 true — add_time **시작월** 미만
  * @param {number} oy
  * @param {number} om
@@ -805,61 +765,6 @@ function dbAnOrderYmBefore_(oy, om, sy, sm) {
     return false;
   }
   return om < sm;
-}
-
-/**
- * 주문(연,월)이 (ey,em) **이후**이면 true — `last_inclusive` **초과**
- * @param {number} oy
- * @param {number} om
- * @param {number} ey
- * @param {number} em
- * @return {boolean}
- */
-function dbAnOrderYmAfter_(oy, om, ey, em) {
-  if (oy > ey) {
-    return true;
-  }
-  if (oy < ey) {
-    return false;
-  }
-  return om > em;
-}
-
-/**
- * `03_상품_매출인정_종료` — 상품당 마지막 인정 연·월(이후 주문·건수 fact에서 제외)
- * @return {Object<string, { lastY: number, lastM: number }>} key: prodKey
- */
-function dbAnReadProductSalesEndMap_() {
-  var o = {};
-  var ss;
-  try {
-    ss = dbAnOpenOrThrow_();
-  } catch (e) {
-    return o;
-  }
-  var sh = ss.getSheetByName(DB_SHEET_ANALYTICS_PRODUCT_END_LEGACY);
-  if (!sh) {
-    sh = ss.getSheetByName('03_상품_매출인정_종료');
-  }
-  if (!sh) {
-    return o;
-  }
-  var lr = sh.getLastRow();
-  if (lr < 2) {
-    return o;
-  }
-  var w = DB_ANALYTICS_PRODUCT_END_HEADERS.length;
-  var vals = sh.getRange(2, 1, lr, w).getValues();
-  var i;
-  for (i = 0; i < vals.length; i++) {
-    var ln = vals[i] || [];
-    var pk = dbPmRowKey_(ln[0]);
-    if (!pk) {
-      continue;
-    }
-    o[pk] = { lastY: dbNumO_(ln[1]), lastM: dbNumO_(ln[2]) };
-  }
-  return o;
 }
 
 /**
@@ -896,122 +801,6 @@ function dbAnReadMasterProductAddTimeYm_(master) {
     o[pk] = { y: parseInt(p[0], 10), m: parseInt(p[1], 10) };
   }
   return o;
-}
-
-/**
- * @return {{ ok: true, data: { rows: Object[] } }|{ ok: false, error: { code: string, message: string } }}
- */
-function dbAnalyticsMonthExclusionsRead_() {
-  try {
-    var ss = dbAnOpenOrThrow_();
-  } catch (e) {
-    return { ok: false, error: { code: 'NO_ANALYTICS_SHEET', message: '집계·분석 시트가 없습니다.' } };
-  }
-  var sh3 = ss.getSheetByName(DB_SHEET_ANALYTICS_PRODUCT_END_LEGACY);
-  if (!sh3) {
-    sh3 = ss.getSheetByName('03_상품_매출인정_종료');
-  }
-  if (!sh3) {
-    return { ok: true, data: { rows: [] } };
-  }
-  var lr2 = sh3.getLastRow();
-  if (lr2 < 2) {
-    return { ok: true, data: { rows: [] } };
-  }
-  var w2 = DB_ANALYTICS_PRODUCT_END_HEADERS.length;
-  var vals2 = sh3.getRange(2, 1, lr2, w2).getValues();
-  var rows2 = [];
-  var i;
-  for (i = 0; i < vals2.length; i++) {
-    var ln2 = vals2[i] || [];
-    rows2.push({
-      prod_no: ln2[0],
-      last_inclusive_year: ln2[1],
-      last_inclusive_month: ln2[2],
-      updated_at: String(ln2[3] != null ? ln2[3] : '')
-    });
-  }
-  return { ok: true, data: { rows: rows2 } };
-}
-
-/**
- * 한 상품에 1행. `x_at_(연,월)` = 그 달**부터** 미인정 → **마지막 인정 = 직전 달** · `last_inclusive_*` 직접 지정 가능 · `clear` 시 무제한(행 삭제)
- * @param {Object[]} rows
- * @return {{ ok: true, data: { written: number } }|{ ok: false, error: { code: string, message: string } }}
- */
-function dbAnalyticsMonthExclusionsApply_(rows) {
-  if (!rows || !Array.isArray(rows)) {
-    return { ok: false, error: { code: 'BAD_REQUEST', message: 'rows 배열이 아닙니다.' } };
-  }
-  var ss;
-  try {
-    ss = dbAnOpenOrThrow_();
-  } catch (e) {
-    return { ok: false, error: { code: 'NO_ANALYTICS_SHEET', message: '집계·분석 시트가 없습니다.' } };
-  }
-  var sh = dbGetOrCreateSheetWithHeaders_(ss, DB_SHEET_ANALYTICS_PRODUCT_END_LEGACY, DB_ANALYTICS_PRODUCT_END_HEADERS);
-  var w = DB_ANALYTICS_PRODUCT_END_HEADERS.length;
-  var map = {};
-  var lr0 = sh.getLastRow();
-  if (lr0 >= 2) {
-    var prev = sh.getRange(2, 1, lr0, w).getValues();
-    var t;
-    for (t = 0; t < prev.length; t++) {
-      var L = prev[t] || [];
-      var pkk = dbPmRowKey_(L[0]);
-      if (!pkk) {
-        pkk = '0';
-      }
-      map[pkk] = { prod_no: dbNumO_(L[0]), lastY: dbNumO_(L[1]), lastM: dbNumO_(L[2]) };
-    }
-  }
-  var now = new Date().toISOString();
-  var r;
-  for (r = 0; r < rows.length; r++) {
-    var x = rows[r] || {};
-    var pno = dbNumO_(x.prod_no);
-    if (!isFinite(pno) || pno < 1) {
-      return { ok: false, error: { code: 'BAD_REQUEST', message: 'prod_no(숫자)이 필요합니다. (행 ' + (r + 1) + ')' } };
-    }
-    var pkk2 = dbPmRowKey_(pno);
-    if (x.clear === true || x.clear === 1 || String(x.clear) === '1') {
-      delete map[pkk2];
-      continue;
-    }
-    var ly;
-    var lm;
-    if (x.last_inclusive_year != null && x.last_inclusive_month != null) {
-      ly = dbNumO_(x.last_inclusive_year);
-      lm = dbNumO_(x.last_inclusive_month);
-    } else if (x.x_at_year != null && x.x_at_month != null) {
-      var xy = dbNumO_(x.x_at_year);
-      var xm = dbNumO_(x.x_at_month);
-      if (xy < 2000 || xy > 2100 || xm < 1 || xm > 12) {
-        return { ok: false, error: { code: 'BAD_REQUEST', message: 'x_at_year / x_at_month (1–12) (행 ' + (r + 1) + ')' } };
-      }
-      var pr = dbAnPrevYearMonth_(xy, xm);
-      ly = pr.y;
-      lm = pr.m;
-    } else {
-      return { ok: false, error: { code: 'BAD_REQUEST', message: 'x_at_ 또는 last_inclusive_ 또는 clear (행 ' + (r + 1) + ')' } };
-    }
-    if (ly < 2000 || ly > 2100 || lm < 1 || lm > 12) {
-      return { ok: false, error: { code: 'BAD_REQUEST', message: 'last_inclusive·연·월 오류 (행 ' + (r + 1) + ')' } };
-    }
-    map[pkk2] = { prod_no: pno, lastY: ly, lastM: lm };
-  }
-  var out = [];
-  for (var k in map) {
-    if (map.hasOwnProperty(k)) {
-      var e = map[k];
-      out.push([e.prod_no, e.lastY, e.lastM, now]);
-    }
-  }
-  dbClearDataRows2Plus_(sh, w);
-  if (out.length) {
-    sh.getRange(2, 1, out.length, w).setValues(out);
-  }
-  return { ok: true, data: { written: out.length } };
 }
 
 /**
@@ -1157,8 +946,8 @@ function dbAnSalesCardsMetricsFrom02_(ssA, y, m) {
   } catch (eM) {
     master = null;
   }
-  var endMap = dbAnReadProductSalesEndMap_();
   var addMap = master ? dbAnReadMasterProductAddTimeYm_(master) : {};
+  var pmMap = dbPmReadMappingMap_();
 
   var salesSum = 0;
   var refundSum = 0;
@@ -1209,8 +998,9 @@ function dbAnSalesCardsMetricsFrom02_(ssA, y, m) {
     if (st2 && dbAnOrderYmBefore_(oy2, om02, st2.y, st2.m)) {
       continue;
     }
-    var en2 = pkey2 ? endMap[pkey2] : null;
-    if (en2 && dbAnOrderYmAfter_(oy2, om02, en2.lastY, en2.lastM)) {
+    var pmR2 = pkey2 ? pmMap[pkey2] : null;
+    var seY2 = pmR2 && pmR2.sales_end ? String(pmR2.sales_end).trim() : '';
+    if (seY2.length >= 8 && dbAnOrderYmdAfterSalesEndExclusive_(ymd0, seY2)) {
       continue;
     }
     var rawAmt2 = dbNumO_(L2[6]);
@@ -1427,7 +1217,7 @@ function dbAnFactDeleteRowsYmdInMonth_(shF, pfx) {
 }
 
 /**
- * `02_주문라인_실적` + (읽기) 마스터 `orders` + `add_time`·03 — 기존 fact 롱과 동일한 **가상** 행(리포트는 시트 fact가 아님)
+ * `02_주문라인_실적` + (읽기) 마스터 `orders` + 상품 `add_time` — 기존 fact 롱과 동일한 **가상** 행(리포트는 시트 fact가 아님)
  * @param {number} y
  * @param {number} m
  * @return {{ ok: true, data: { rows: Object[] } }|{ ok: false, error: { code: string, message: string } }}
@@ -1469,8 +1259,8 @@ function dbAnVirtualFactRowsFromOrderLines_(y, m) {
       }
     }
   }
-  var endMap = dbAnReadProductSalesEndMap_();
   var addMap = master ? dbAnReadMasterProductAddTimeYm_(master) : {};
+  var pmMapV = dbPmReadMappingMap_();
   var monthMemByCat = {};
   var agg = {};
   var um2 = {};
@@ -1528,8 +1318,9 @@ function dbAnVirtualFactRowsFromOrderLines_(y, m) {
     if (st2 && dbAnOrderYmBefore_(oy2, om02, st2.y, st2.m)) {
       continue;
     }
-    var en2 = pkey2 ? endMap[pkey2] : null;
-    if (en2 && dbAnOrderYmAfter_(oy2, om02, en2.lastY, en2.lastM)) {
+    var pmRv = pkey2 ? pmMapV[pkey2] : null;
+    var seYv = pmRv && pmRv.sales_end ? String(pmRv.sales_end).trim() : '';
+    if (seYv.length >= 8 && dbAnOrderYmdAfterSalesEndExclusive_(ymd0, seYv)) {
       continue;
     }
     var rawAmt2 = dbNumO_(L2[6]);
@@ -1872,14 +1663,14 @@ function dbAnalyticsFactReportComputed_(y, m) {
     prodNameByNo: nameMap,
     previousYearDataAvailable: aPr.length > 0,
     note:
-      '매출: salesByCategoryThenProduct(대분류→상품). 건수: lineCountsByProduct(상품). 누적(순액): runningNetByDate. uniqueMembersMonthByCategory=월간 분류별 고유 인원(일별 um 합 아님). x는 last_inclusive(직전달까지)로 `03_상품_매출인정_종료`에 저장.'
+      '매출: salesByCategoryThenProduct(대분류→상품). 건수: lineCountsByProduct(상품). 누적(순액): runningNetByDate. uniqueMembersMonthByCategory=월간 분류별 고유 인원(일별 um 합 아님). 상품별 판매 종료: product_mapping.sales_end(당일 포함), 그 이후 주문·줄은 집계 제외.'
   };
 }
 
 var DB_AN_ORDER_LINES_RAW_MAX = 5000;
 
 /**
- * `02_주문라인_실적` 원본(필터: 주문일이 해당 연·월) — 대시보드에서 인정·x 편집용
+ * `02_주문라인_실적` 원본(필터: 주문일이 해당 연·월) — 대시보드 열람용
  * @param {number} y
  * @param {number} m 1~12
  * @return {{ ok: true, data: { rows: Object[], truncated: boolean } }|{ ok: false, error: { code: string, message: string } }}
@@ -1918,8 +1709,7 @@ function dbAnalyticsOrderLinesRawGet_(y, m) {
       truncated = true;
       break;
     }
-    var xcell = L[13];
-    var xbool = xcell === true || String(xcell).toLowerCase() === 'true' || xcell === 1;
+    var addYmd = dbAnAnyToSeoulYmd_(L[10]);
     out.push({
       lineKey: dbAnLineKey_(L[0], L[2]),
       order_section_item_no: L[0] != null ? L[0] : '',
@@ -1933,70 +1723,8 @@ function dbAnalyticsOrderLinesRawGet_(y, m) {
       section_status: L[7] != null ? String(L[7]) : '',
       internal_category: L[8] != null ? String(L[8]) : '',
       lifecycle: L[9] != null ? String(L[9]) : '',
-      report_as_prod_no: L[11] != null ? String(L[11]).trim() : '',
-      last_recognition_date: dbAnAnyToSeoulYmd_(L[12]),
-      x_set: xbool
+      add_time_ymd: addYmd
     });
   }
   return { ok: true, data: { rows: out, truncated: truncated } };
-}
-
-/**
- * `02_주문라인_실적` **라인 1:1** — `last_recognition_date`·`x_set`만 갱신
- * @param {Object[]} updates `{ order_section_item_no, order_no, last_recognition_date?, x_set? }[]`
- * @return {{ ok: true, data: { applied: number, notFound: Object[] } }|{ ok: false, error: { code: string, message: string } }}
- */
-function dbAnalyticsOrderLineMetaApply_(updates) {
-  if (!updates || !updates.length) {
-    return { ok: false, error: { code: 'BAD_REQUEST', message: 'updates가 비었습니다.' } };
-  }
-  var ssA;
-  try {
-    ssA = dbAnOpenOrThrow_();
-  } catch (e) {
-    return { ok: false, error: { code: 'NO_ANALYTICS_SHEET', message: '집계·분석 시트가 없습니다.' } };
-  }
-  var sh = dbAnGetOrderLinesSheet_(ssA);
-  var lr = sh.getLastRow();
-  if (lr < 2) {
-    return { ok: false, error: { code: 'NO_DATA', message: '02_주문라인_실적이 비었습니다.' } };
-  }
-  var w0 = DB_ANALYTICS_ORDER_LINE_HEADERS.length;
-  var nR = Math.max(0, lr - 1);
-  var vals2 = sh.getRange(2, 1, nR, w0).getValues();
-  var idx = {};
-  var r0;
-  for (r0 = 0; r0 < vals2.length; r0++) {
-    var kk = dbAnLineKey_(vals2[r0][0], vals2[r0][2]);
-    if (kk && kk !== '\t') {
-      idx[kk] = r0;
-    }
-  }
-  var notFound = [];
-  var u;
-  var applied = 0;
-  for (u = 0; u < updates.length; u++) {
-    var up = updates[u] || {};
-    var k0 = dbAnLineKey_(up.order_section_item_no, up.order_no);
-    if (!k0 || k0 === '\t') {
-      notFound.push({ key: k0, reason: 'BAD_KEY' });
-      continue;
-    }
-    if (!Object.prototype.hasOwnProperty.call(idx, k0)) {
-      notFound.push({ key: k0, reason: 'NOT_FOUND' });
-      continue;
-    }
-    var foundR = idx[k0];
-    var sheetRow = foundR + 2;
-    if (up.last_recognition_date !== undefined) {
-      var t = up.last_recognition_date;
-      var sdt = t == null || t === '' ? '' : String(t).trim();
-      sh.getRange(sheetRow, 13, 1, 1).setValue(sdt.length ? sdt : '');
-    }
-    if (up.x_set !== undefined) {
-      sh.getRange(sheetRow, 14, 1, 1).setValue(up.x_set === true || up.x_set === 'true' || up.x_set === 1);
-    }
-    applied++;
-  }
-  return { ok: true, data: { applied: applied, notFound: notFound } };
 }

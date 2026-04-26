@@ -50,6 +50,7 @@ var DB_SHEET_PRODUCT_MAPPING = 'product_mapping';
  * - internal_category: `unmapped` | `solpass` | `solutine` | `challenge` | `textbook` | `jasoseo` (영문 키 고정)
  * - lifecycle: `active` | `archived` | `test` | `legacy` ((구)상품)
  */
+/** `sales_end`: yyyy-MM-dd, archived·legacy에서만 필수(맨 끝 열 — 기존 7열 시트와 행 정렬 유지) */
 var DB_PRODUCT_MAPPING_HEADERS = [
   'prod_no',
   'product_name',
@@ -57,7 +58,8 @@ var DB_PRODUCT_MAPPING_HEADERS = [
   'lifecycle',
   'created_at',
   'updated_at',
-  'notes'
+  'notes',
+  'sales_end'
 ];
 
 /**
@@ -67,7 +69,7 @@ var DB_PROP_SHEETS_ANALYTICS_ID = 'SHEETS_ANALYTICS_ID';
 
 /** 연·월 목표 — `goal_target` = `entire` 또는 internal 대분류 키 (빈칸으로 entire 금지) */
 var DB_SHEET_ANALYTICS_GOALS = '01_연월_목표';
-/** 마스터 `order_items` 1:1 + 실결제·스냅샷 + report_as / 인정 / x (이 파일에서만 쓰기) */
+/** 마스터 `order_items` 1:1 + 실결제·스냅샷(종료일은 운영 product_mapping.sales_end) */
 var DB_SHEET_ANALYTICS_ORDER_LINES = '02_주문라인_실적';
 
 /** @type {string[]} */
@@ -88,17 +90,13 @@ var DB_ANALYTICS_ORDER_LINE_HEADERS = [
   'section_status',
   'internal_category',
   'lifecycle',
-  'add_time',
-  'report_as_prod_no',
-  'last_recognition_date',
-  'x_set'
+  'add_time'
 ];
 
 /* --- 이전 집계 탭(이름·데이터 이행용) --- */
 var DB_SHEET_ANALYTICS_KPI_LEGACY = 'kpi_매출건수_목표';
 var DB_SHEET_ANALYTICS_KPI_OLD = '01_일월간_매출_인원_목표';
 var DB_SHEET_ANALYTICS_FACT_LEGACY = 'fact_매출건수_일별';
-var DB_SHEET_ANALYTICS_PRODUCT_END_LEGACY = '03_상품_매출인정_종료';
 
 /**
  * 리포트 `dbAnalyticsFactRowsGet_` 메모리 결과 형식 (롱) — 02_주문라인_실적에서 집계해 채움
@@ -113,8 +111,6 @@ var DB_ANALYTICS_FACT_HEADERS = [
   'batch_id',
   'updated_at'
 ];
-
-var DB_ANALYTICS_PRODUCT_END_HEADERS = ['prod_no', 'last_inclusive_year', 'last_inclusive_month', 'updated_at'];
 
 /** 끝 2열: docs/SPEC.md §5.1.1 공통 */
 var DB_META_SUFFIX = ['fetched_at', 'source_sync_id'];

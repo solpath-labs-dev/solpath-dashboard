@@ -106,10 +106,7 @@ function openSyncAllowedActions_() {
     'analyticsFactRebuild',
     'analyticsFactRowsGet',
     'analyticsFactReport',
-    'analyticsOrderLinesRawGet',
-    'analyticsOrderLineMetaApply',
-    'analyticsMonthExclusionsGet',
-    'analyticsMonthExclusionsApply'
+    'analyticsOrderLinesRawGet'
   ];
 }
 
@@ -121,7 +118,7 @@ function openSyncAllowedActions_() {
 function openSyncRouteAction_(action, e) {
   e = e || { parameter: {} };
   if (action === 'ping') {
-    return { ok: true, data: { name: 'openSync', version: 9, actions: openSyncAllowedActions_() } };
+    return { ok: true, data: { name: 'openSync', version: 11, actions: openSyncAllowedActions_() } };
   }
   if (action === 'syncOpenFull') {
     try {
@@ -266,23 +263,6 @@ function openSyncRouteAction_(action, e) {
     }
     return dbAnalyticsOrderLinesRawGet_(yOl, mOl);
   }
-  if (action === 'analyticsOrderLineMetaApply') {
-    var upd = openSyncExtractOrderLineMetaUpdates_(e);
-    if (!upd || !upd.length) {
-      return { ok: false, error: { code: 'BAD_REQUEST', message: 'payload JSON에 updates(배열)가 필요합니다.' } };
-    }
-    return dbAnalyticsOrderLineMetaApply_(upd);
-  }
-  if (action === 'analyticsMonthExclusionsGet') {
-    return dbAnalyticsMonthExclusionsRead_();
-  }
-  if (action === 'analyticsMonthExclusionsApply') {
-    var xr = openSyncExtractTargetRowsForApply_(e);
-    if (xr === null) {
-      return { ok: false, error: { code: 'BAD_REQUEST', message: 'payload에 rows(배열)가 없습니다.' } };
-    }
-    return dbAnalyticsMonthExclusionsApply_(xr);
-  }
   return { ok: false, error: 'UNKNOWN_ACTION', allowed: openSyncAllowedActions_() };
 }
 
@@ -382,54 +362,6 @@ function openSyncExtractTargetRowsForApply_(e) {
         var jo = JSON.parse(raw);
         if (jo && Array.isArray(jo.rows)) {
           return jo.rows;
-        }
-      } catch (ej) {}
-    }
-  }
-  return null;
-}
-
-/**
- * `analyticsOrderLineMetaApply` — `updates: []` (02 라인 PK + last_recognition_date / x_set)
- * @param {Object} e
- * @return {any[]|null}
- */
-function openSyncExtractOrderLineMetaUpdates_(e) {
-  e = e || {};
-  var p = e.parameter || {};
-  var bodyText = p.payload != null ? String(p.payload) : '';
-  if (!bodyText.length && e.postData && e.postData.contents) {
-    var loU = (e.postData.type != null ? String(e.postData.type) : '').toLowerCase();
-    if (loU.indexOf('application/x-www-form-urlencoded') >= 0 || loU.indexOf('text/plain') >= 0 || !loU.length) {
-      var fU = openSyncParseFormUrlEncoded_(String(e.postData.contents));
-      if (fU && fU.payload != null) {
-        bodyText = String(fU.payload);
-      }
-    }
-  }
-  if (bodyText.length) {
-    var jU;
-    try {
-      jU = JSON.parse(bodyText);
-    } catch (e1) {
-      try {
-        jU = JSON.parse(decodeURIComponent(bodyText));
-      } catch (e2) {
-        jU = null;
-      }
-    }
-    if (jU && Array.isArray(jU.updates)) {
-      return jU.updates;
-    }
-  }
-  if (e.postData && e.postData.contents) {
-    var rawU = String(e.postData.contents);
-    var loJ = (e.postData.type != null ? String(e.postData.type) : '').toLowerCase();
-    if (loJ.indexOf('application/json') >= 0) {
-      try {
-        var joU = JSON.parse(rawU);
-        if (joU && Array.isArray(joU.updates)) {
-          return joU.updates;
         }
       } catch (ej) {}
     }
@@ -543,9 +475,6 @@ function doPost(e) {
   }
   if (jBody && jBody.action === 'analyticsTargetsApply' && jBody.rows != null && Array.isArray(jBody.rows)) {
     return openSyncTextOutputJson_(dbAnalyticsTargetsApply_(jBody.rows));
-  }
-  if (jBody && jBody.action === 'analyticsMonthExclusionsApply' && jBody.rows != null && Array.isArray(jBody.rows)) {
-    return openSyncTextOutputJson_(dbAnalyticsMonthExclusionsApply_(jBody.rows));
   }
   var action = '';
   try {

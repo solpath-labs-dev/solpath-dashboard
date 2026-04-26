@@ -1824,37 +1824,37 @@ export function initAnalytics(mount) {
         '<th class="sp-an-viz__row-h" scope="col">주문번호</th>' +
         '<th class="sp-an-viz__row-h" scope="col">상품</th>' +
         '<th class="sp-an-viz__row-h" scope="col">대분류</th>' +
-        '<th class="sp-an-viz__row-h" scope="col">집계 기준 상품</th>' +
-        '<th class="sp-an-viz__row-h" scope="col">마지막 인정일</th>' +
-        '<th class="sp-an-viz__row-h" scope="col">집계 제외 확정</th>' +
-        '<th class="sp-an-viz__row-h" scope="col"></th></tr></thead><tbody>';
+        '<th class="sp-an-viz__row-h" scope="col">상태</th>' +
+        '<th class="sp-an-viz__row-h" scope="col">상품 등록일</th>' +
+        '</tr></thead><tbody>';
       for (let io = 0; io < rows.length; io++) {
         const row = rows[io] || {};
-        const osi0 = row.order_section_item_no;
-        const ono0 = row.order_no;
         const oymd0 = String(row.order_time_ymd != null ? row.order_time_ymd : '');
-        let lrd0 = String(row.last_recognition_date != null ? row.last_recognition_date : '');
-        if (lrd0.length > 10) {
-          lrd0 = lrd0.slice(0, 10);
-        }
-        const xset0 = row.x_set === true;
         const catL0 = String(row.internal_category != null ? row.internal_category : '');
+        const life0 = String(row.lifecycle != null ? row.lifecycle : '');
         const pnm0 = String(row.prod_name != null ? row.prod_name : '');
-        const rap0 = String(row.report_as_prod_no != null ? row.report_as_prod_no : '');
-        const osiA = String(osi0 != null ? osi0 : '');
-        const onoA = String(ono0 != null ? ono0 : '');
+        const onoA = String(row.order_no != null ? row.order_no : '');
+        const addY = String(row.add_time_ymd != null ? row.add_time_ymd : '');
         const catDisp = AN_CATEGORY_KEY_LABEL[catL0] != null ? AN_CATEGORY_KEY_LABEL[catL0] : catL0;
-        h += '<tr data-ol-osi="' + esc(osiA) + '" data-ol-ono="' + esc(onoA) + '">' +
+        const lifeDisp =
+          life0 === 'active'
+            ? '진행'
+            : life0 === 'archived'
+              ? '만료'
+              : life0 === 'legacy'
+                ? '(구)상품'
+                : life0 === 'test'
+                  ? '테스트'
+                  : life0;
+        h +=
+          '<tr>' +
           '<td>' + esc(oymd0) + '</td>' +
           '<td>' + esc(onoA) + '</td>' +
           '<td class="sp-an-ol__cell-name">' + esc(pnm0) + '</td>' +
           '<td>' + esc(catDisp) + '</td>' +
-          '<td>' + esc(rap0) + '</td>' +
-          '<td><input type="date" class="sp-confirm sp-an-ol-date" value="' + esc(lrd0) + '"/></td>' +
-          '<td class="sp-an-ol__cell-x"><input type="checkbox" class="sp-an-ol-x" aria-label="집계에서 이 줄 제외 확정"' +
-          (xset0 ? ' checked' : '') +
-          ' /></td>' +
-          '<td><button type="button" class="btn btn--secondary sp-an-ol-save">저장</button></td></tr>';
+          '<td>' + esc(lifeDisp) + '</td>' +
+          '<td>' + esc(addY) + '</td>' +
+          '</tr>';
       }
       h += '</tbody></table>';
       el.olScroll.innerHTML = h;
@@ -1866,62 +1866,6 @@ export function initAnalytics(mount) {
       el.olScroll.innerHTML = '';
       logSolpathApi_('analyticsOrderLinesRawGet', null, e);
     }
-  }
-
-  if (el.ol) {
-    el.ol.addEventListener('click', function (ev) {
-      const t0 = ev.target;
-      if (!t0 || !t0.classList || !t0.classList.contains('sp-an-ol-save')) {
-        return;
-      }
-      const tr0 = t0.closest('tr');
-      if (!tr0 || !ready) {
-        return;
-      }
-      const osi1 = tr0.getAttribute('data-ol-osi');
-      const ono1 = tr0.getAttribute('data-ol-ono');
-      const dInp = tr0.querySelector('.sp-an-ol-date');
-      const xInp2 = tr0.querySelector('.sp-an-ol-x');
-      if (dInp == null || xInp2 == null) {
-        return;
-      }
-      const base0 = String(GAS_BASE_URL).trim();
-      const btn = /** @type {HTMLButtonElement} */ (t0);
-      btn.disabled = true;
-      void (async function () {
-        const r0 = await gasJsonpWithParams(
-          base0,
-          'analyticsOrderLineMetaApply',
-          {
-            payload: JSON.stringify({
-              updates: [
-                {
-                  order_section_item_no: osi1,
-                  order_no: ono1,
-                  last_recognition_date: dInp.value,
-                  x_set: xInp2.checked
-                }
-              ]
-            })
-          },
-          120000
-        );
-        btn.disabled = false;
-        if (r0 && r0.ok) {
-          if (el.olWarn) {
-            el.olWarn.textContent =
-          '저장했습니다. 집계 숫자는 시트·화면을 갱신한 뒤에 맞춰집니다.';
-            el.olWarn.removeAttribute('hidden');
-          }
-        } else {
-          if (el.olWarn) {
-            el.olWarn.textContent = formatHintWithErrorCode_(r0) || '저장하지 못했습니다.';
-            el.olWarn.removeAttribute('hidden');
-          }
-        }
-        logSolpathApi_('analyticsOrderLineMetaApply', r0, null);
-      })();
-    });
   }
 
   /**
