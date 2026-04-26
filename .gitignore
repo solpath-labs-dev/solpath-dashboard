@@ -28,6 +28,7 @@ front/*
 !front/docs/**
 # 배포용 일회 클론(solpath-dashboard-front)
 .tmp-solpath-dashboard-front/
+.solpath-dashboard-tmp/
 
 # --- OS / editor cruft ---
 .DS_Store

@@ -688,7 +688,7 @@ export function initAnalytics(mount) {
       '<div class="sp-an-viz__summarybox">' +
       '<p class="sp-an-viz__summaryp"><strong>목표(매출)</strong> ' +
       (gSales != null && isFinite(gSales) ? fmtKrw_(gSales) : '—') +
-      (gCnt != null && isFinite(gCnt) ? ' · 목표(인원) ' + fmtInt_(gCnt) : '') +
+      (gCnt != null && isFinite(gCnt) ? ' · 목표(건수) ' + fmtInt_(gCnt) : '') +
       (pctG ? ' · ' + pctG : '') +
       '</p><p class="sp-an-viz__summaryp"><strong>이번 달 실제(순, 필터)</strong> ' +
       fmtKrw_(actualNet) +
@@ -714,9 +714,9 @@ export function initAnalytics(mount) {
     if (!order.length) {
       const scpEmpty = (el.vizScope && el.vizScope.value) || 'entire';
       renderVizSummary_(report, y, m, scpEmpty);
-      el.vizTitle && (el.vizTitle.textContent = '솔패스 온라인 매출 현황 — ' + y + '·' + m + '월');
+      el.vizTitle && (el.vizTitle.textContent = '일별 순매출 · ' + y + '년 ' + m + '월');
       el.vizScroll.innerHTML =
-        '<p class="sp-an-viz__empty">대분류 축이 없어 격자를 그리지 못했습니다. 02_주문라인_실적이 비었거나 fact가 아직 없을 수 있습니다.</p>';
+        '<p class="sp-an-viz__empty">대분류 데이터가 없어 표를 만들지 못했습니다. 02 실적이 비었거나 fact가 아직 없을 수 있습니다.</p>';
       return;
     }
     const scp0 = (el.vizScope && el.vizScope.value) || 'entire';
@@ -924,7 +924,7 @@ export function initAnalytics(mount) {
     }
 
     renderVizSummary_(report, y, m, scp0);
-    el.vizTitle && (el.vizTitle.textContent = '솔패스 온라인 매출 현황 — ' + y + '·' + m + '월');
+    el.vizTitle && (el.vizTitle.textContent = '일별 순매출 · ' + y + '년 ' + m + '월');
     el.vizScroll.innerHTML =
       '<table class="sp-an-viz-table"><thead>' +
       theadWeek +
@@ -992,7 +992,8 @@ export function initAnalytics(mount) {
     const useY = isFinite(py0) ? py0 : y;
     const useM = isFinite(pm0) && pm0 >= 1 && pm0 <= 12 ? pm0 : m;
     if (el.peopleLede) {
-      el.peopleLede.textContent = '· 라인(건) = 가상 fact `line_count` 합(주문 라인). · 아래 12칸은 연(인원 ' + useY + ')·월·대분류.';
+      el.peopleLede.textContent =
+        '라인 건수는 주문 품목 줄(가상 line_count) 합입니다. 아래 연간 표는 ' + useY + '년·월·대분류 기준입니다.';
     }
     if (el.peopleGrid) {
       el.peopleGrid.innerHTML = '<p class="sp-an-viz__empty">불러오는 중…</p>';
@@ -1419,9 +1420,9 @@ export function initAnalytics(mount) {
       }
       if (el.vizLede) {
         el.vizLede.textContent =
-          '일별 격자는 연·월(1~12)을 골랐을 때만 채웁니다. 위 [기간]에서 예: 「' +
+          '일별 표는 특정 월을 골랐을 때만 채워집니다. 위 [기간]에서 「' +
           ym.y +
-          '년 n월」을 고르세요. (「○년(그 해 전부)」또는 월 0이면 열이 생기지 않습니다.)';
+          '년 n월」처럼 월이 있는 항목을 고르세요. (연만 고르면 열이 없습니다.)';
       }
       if (el.vizScroll) {
         el.vizScroll.innerHTML = '';
@@ -1435,7 +1436,10 @@ export function initAnalytics(mount) {
     }
     if (el.vizLede) {
       el.vizLede.textContent =
-        '집계 DB 02_주문라인_실적 · ' + ym.y + '년 ' + ym.m + '월 · 내부 대분류별 일 순매출(매출−환불). 환불 행은 일별 환불액 합(표시: −).';
+        ym.y +
+        '년 ' +
+        ym.m +
+        '월 · 순매출(매출−환불). 행은 대분류 또는 상품, 열은 일자입니다. 환불은 일별로 − 합산.';
     }
     if (el.vizWarn) {
       el.vizWarn.setAttribute('hidden', '');
@@ -1536,7 +1540,7 @@ export function initAnalytics(mount) {
       tdE.className = 'sp-an-table__empty';
       if (localRows.length === 0) {
         tdE.textContent =
-          '이 표는 목표(선택)만 보입니다. 위「집계 실적」이 실제 주문·매출이고, 목표는 아래에 한 줄씩 넣고「이 줄을 표에 넣기」합니다.';
+          '이 표는 목표만 보입니다. 위「실적 요약」이 동기화 주문 기준이고, 목표는 아래에서 한 줄씩 넣은 뒤「이 줄을 표에 넣기」를 누릅니다.';
       } else {
         tdE.textContent =
           '지금 [기간]에 맞는 목표 행이 없습니다.「전체 기간」으로 바꾸면 다른 목표가 다시 보일 수 있습니다.';

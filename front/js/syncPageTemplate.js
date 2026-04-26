@@ -112,18 +112,18 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
             </div>
             <div class="sp-confirm-block sp-an-block" id="sp-an-block">
               <p class="sp-confirm-instruct" id="sp-an-instruct">
-                <strong>동기화된 주문 마스터</strong>에서 <strong>실제 매출·주문 건수·구매자 수</strong>를 봅니다(「<strong>데이터 동기화</strong>」로 최신이 반영돼 있어야 합니다). <strong>목표(KPI)</strong>는 아래 <strong>선택</strong>이며, 값을 비워 두고 비교할 땐 <strong>전년 동일 기간</strong> 실적을 기준으로 삼을 수 있습니다. <strong>드라이브에 저장</strong>은 목표 표를 쓰는 경우에만 필요합니다.
+                <strong>데이터 동기화</strong>로 올라온 주문을 기준으로 <strong>실매출·주문 수</strong>를 봅니다. <strong>목표(KPI)</strong>는 아래에서만 적으며, 비교는 <strong>전년 동기</strong> 실적으로 할 수 있습니다. <strong>드라이브에 저장</strong>은 목표 표를 쓸 때만 필요합니다.
               </p>
               <p class="sp-pm__hint" id="sp-an-hint" hidden></p>
               <div class="sp-an-actuals" id="sp-an-actuals" hidden>
-                <h3 class="sp-an-actuals__h">집계 실적(마스터 DB)</h3>
-                <p class="sp-an-actuals__lede" id="sp-an-actualsLede" aria-live="polite">기간을 고르면 아래에 그 기간에 맞는 합계가 뜹니다. 기간이「전체」는 <strong>이번 달</strong> 실적을 뜻합니다.</p>
+                <h3 class="sp-an-actuals__h">선택 기간 실적</h3>
+                <p class="sp-an-actuals__lede" id="sp-an-actualsLede" aria-live="polite">기간을 바꾸면 카드 숫자가 맞춰집니다. 「전체」는 <strong>이번 달</strong>입니다.</p>
                 <div class="sp-an-filters" id="sp-an-filters">
                   <label class="sp-an-filters__f sp-an-filters__f--wide"><span class="sp-pm-filters__lbl">기간</span>
-                    <select class="sp-confirm" id="sp-an-filterPeriod" title="집계 실적과 목표 표를 같은 기간으로 맞출 수 있습니다"></select>
+                    <select class="sp-confirm" id="sp-an-filterPeriod" title="실적 카드·아래 표·목표 행 필터를 같은 기간으로 맞춥니다"></select>
                   </label>
                 </div>
-                <div class="sp-an-actuals__cards" id="sp-an-actualsCards" aria-label="이번 점에 대한 집계">
+                <div class="sp-an-actuals__cards" id="sp-an-actualsCards" aria-label="선택 기간 합계">
                   <div class="sp-an-card" id="sp-an-cardSales"><span class="sp-an-card__lbl">실제 매출(원)</span><span class="sp-an-card__val" id="sp-an-valSales">—</span></div>
                   <div class="sp-an-card" id="sp-an-cardOrders"><span class="sp-an-card__lbl">주문 건수</span><span class="sp-an-card__val" id="sp-an-valOrders">—</span></div>
                   <div class="sp-an-card" id="sp-an-cardMem"><span class="sp-an-card__lbl">구매자 수(고유)</span><span class="sp-an-card__val" id="sp-an-valMem">—</span></div>
@@ -132,46 +132,46 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                 <p class="sp-an-actuals__warn" id="sp-an-actualsWarn" hidden></p>
               </div>
               <div class="sp-an-viz" id="sp-an-viz" hidden>
-                <h2 class="sp-an-viz__title" id="sp-an-vizTitle">솔패스 온라인 매출 현황</h2>
+                <h2 class="sp-an-viz__title" id="sp-an-vizTitle">일별 순매출</h2>
                 <div class="sp-an-viz__toolbar" id="sp-an-vizToolbar">
-                  <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">매출 범위</span>
-                    <select class="sp-confirm" id="sp-an-vizScope" title="전체(대분류만) / 한 대분류(상품 행)">
+                  <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">보기 범위</span>
+                    <select class="sp-confirm" id="sp-an-vizScope" title="사이트 전체(대분류 행) 또는 한 대분류(상품 행)">
                       <option value="entire">전체(사이트) — 대분류 행</option>
                     </select>
                   </label>
                 </div>
-                <p class="sp-an-viz__lede" id="sp-an-vizLede">집계 <strong>02_주문라인_실적</strong>·특정 <strong>월</strong>을 고르면 일·대분류(또는 상품) 격자가 뜹니다. 교재·자소서는 대분류만(드릴다운 없음).</p>
+                <p class="sp-an-viz__lede" id="sp-an-vizLede">월을 고르면 <strong>일자 열 × 대분류(또는 상품) 행</strong>으로 순매출을 봅니다. 교재·자소서는 행을 쪼개지 않습니다.</p>
                 <p class="sp-an-viz__warn" id="sp-an-vizWarn" hidden></p>
                 <div class="sp-an-viz__summary" id="sp-an-vizSummary" aria-label="목표·전년"></div>
-                <div class="sp-an-viz-scroll" id="sp-an-vizScroll" role="region" aria-label="일별 매출 격자"></div>
+                <div class="sp-an-viz-scroll" id="sp-an-vizScroll" role="region" aria-label="일별 순매출 표"></div>
               </div>
               <div class="sp-an-people" id="sp-an-people" hidden>
-                <h2 class="sp-an-people__title">인원·건수 (매출 격자와 별도 UI)</h2>
+                <h2 class="sp-an-people__title">주문 라인 건수</h2>
                 <div class="sp-an-people__toolbar" id="sp-an-peopleToolbar">
                   <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">연</span>
-                    <input type="number" class="sp-confirm" id="sp-an-peopleY" min="2000" max="2100" step="1" title="인원 격자 연도" />
+                    <input type="number" class="sp-confirm" id="sp-an-peopleY" min="2000" max="2100" step="1" title="라인 건수 표 연도" />
                   </label>
                   <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">월</span>
-                    <select class="sp-confirm" id="sp-an-peopleM" title="인원 격자 월"></select>
+                    <select class="sp-confirm" id="sp-an-peopleM" title="라인 건수 표 월"></select>
                   </label>
                 </div>
-                <p class="sp-an-people__lede" id="sp-an-peopleLede">일×상품 <strong>라인(건) 수</strong> — 주·월 묶음이 아닌 달력 열(1~31일)입니다. 아래 표는 <strong>연</strong>이 바뀔 때만 12개월 열이 바뀝니다.</p>
+                <p class="sp-an-people__lede" id="sp-an-peopleLede">같은 월의 fact 기준으로, 일별·대분류별 <strong>주문 라인 수</strong>를 봅니다. 아래 두 표는 연·월 선택에 맞춰집니다.</p>
                 <p class="sp-an-people__warn" id="sp-an-peopleWarn" hidden></p>
-                <h3 class="sp-an-people__h3">가로 일 × 세로 상품(과정)</h3>
-                <div class="sp-an-people-scroll" id="sp-an-peopleGrid" role="region" aria-label="일별 상품 건수"></div>
-                <h3 class="sp-an-people__h3">월 × 내부 대분류(고정 키)</h3>
-                <div class="sp-an-people-scroll" id="sp-an-peopleMatrix" role="region" aria-label="연간 월별 대분류"></div>
-                <p class="sp-an-people__xnote" id="sp-an-peopleXnote">아래 <strong>02 주문라인</strong>에서 인정·<strong>x</strong>·<code>report_as</code>를 고칠 수 있고, 드라이브 02 시트에도 곧바로 반영됩니다.</p>
+                <p class="sp-an-subcap">이 달 · 일별 × 상품</p>
+                <div class="sp-an-people-scroll" id="sp-an-peopleGrid" role="region" aria-label="이 달 일자별 라인 건수"></div>
+                <p class="sp-an-subcap">한 해 · 월별 × 대분류</p>
+                <div class="sp-an-people-scroll" id="sp-an-peopleMatrix" role="region" aria-label="연도 월별 대분류 라인 건수"></div>
+                <p class="sp-an-people__xnote" id="sp-an-peopleXnote">맨 아래 <strong>주문라인</strong>에서 인정일·<strong>x</strong>·<code>report_as</code>를 고치면 02 시트에 반영됩니다.</p>
               </div>
               <div class="sp-an-ol" id="sp-an-ol" hidden>
-                <h2 class="sp-an-ol__title">02 주문라인 — 마지막 인정일 · x 확정</h2>
-                <p class="sp-an-ol__lede" id="sp-an-olLede">위 <strong>기간</strong>과 같은 달·주문일 기준으로 02를 불러옵니다. (많으면 응답이 잘릴 수 있습니다.)</p>
+                <h2 class="sp-an-ol__title">주문라인 인정 편집</h2>
+                <p class="sp-an-ol__lede" id="sp-an-olLede">선택한 달·주문일 기준으로 02를 불러옵니다. 행이 많으면 일부만 보일 수 있습니다.</p>
                 <p class="sp-an-ol__warn" id="sp-an-olWarn" hidden></p>
                 <div class="sp-an-ol-scroll" id="sp-an-olScroll" role="region" aria-label="주문라인 인정 편집"></div>
               </div>
               <div class="sp-pm__loading" id="sp-an-loading" hidden>불러오는 중</div>
               <div class="sp-pm-init" id="sp-an-init" hidden>
-                <p class="sp-pm-init__lede" id="sp-an-initLede">목표를 드라이브 표에 쓰려면 먼저 여기서 시트를 만듭니다. <strong>위 집계 실적</strong>은 마스터만 있으면 됩니다. 이미 옛날 집계 파일만 있을 땐, 시트를 연 뒤 오른쪽 <strong>탭·주문라인 갱신</strong>으로 최신 구조·데이터를 맞출 수 있습니다.</p>
+                <p class="sp-pm-init__lede" id="sp-an-initLede">목표를 드라이브 표에 쓰려면 먼저 여기서 시트를 만듭니다. <strong>위 실적 요약</strong>은 동기화만 되어 있으면 됩니다. 예전 파일만 있을 때는 시트를 연 뒤 <strong>탭·주문라인 갱신</strong>으로 구조를 맞춥니다.</p>
                 <div class="sp-confirm-row sp-pm-init__row">
                   <button type="button" class="btn btn--primary" id="sp-an-btnInit">집계용 드라이브 시트 생성</button>
                 </div>
@@ -184,7 +184,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                   <button type="button" class="sp-an-subtabs__btn" id="sp-an-subCount" role="tab" aria-selected="false" aria-controls="sp-an-tableWrap" tabindex="-1">건수</button>
                 </div>
                 <p class="sp-an-subtabs__lede" id="sp-an-subLede" aria-live="polite">아래 <strong>목표</strong> 표에서 <strong>매출(원)</strong> 열이 더 잘 보이게 켠 상태입니다.</p>
-                <p class="sp-an-table-legend" id="sp-an-tableLegend">▸ <strong>기간</strong>에 맞는 <strong>목표</strong> 행만 남깁니다(위 <strong>집계 실적</strong>과는 별도로, 직접 넣는 숫자입니다). 목표를 안 넣을 때는 <strong>전년 동기</strong> 실적을 기준으로 비교하세요.</p>
+                <p class="sp-an-table-legend" id="sp-an-tableLegend">▸ <strong>기간</strong>에 맞는 <strong>목표</strong> 행만 남깁니다(위 <strong>실적 요약</strong>과 별개로, 여기만 손으로 적습니다). 목표가 없으면 <strong>전년 동기</strong> 실적으로 비교하세요.</p>
                 <div class="sp-an-table-wrap" id="sp-an-tableWrap" role="tabpanel" aria-labelledby="sp-an-subSales">
                   <div class="sp-an-table-scroll">
                     <table class="sp-an-table sp-an-table--mode-sales" id="sp-an-table">

@@ -443,6 +443,17 @@ code {
   background: #f3f5f7;
   border: 1px solid var(--line);
 }
+.sp-an-viz__title {
+  margin: 0 0 0.45rem;
+  font-size: calc(1.05rem + var(--sp-text-bump));
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: #152232;
+  line-height: 1.3;
+}
+.sp-an-viz__toolbar {
+  margin: 0 0 0.35rem;
+}
 .sp-an-viz__h {
   margin: 0 0 0.3rem;
   font-size: calc(0.98rem + var(--sp-text-bump));
@@ -566,6 +577,61 @@ code {
 .sp-an-viz__summaryp--sub {
   color: #3d4a5a;
   font-size: calc(0.78rem + var(--sp-text-bump));
+}
+
+.sp-an-people {
+  margin-top: 1.1rem;
+  padding: 0.75rem 0.85rem 0.95rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #f9fafb 0%, #f3f5f8 100%);
+}
+.sp-an-people__title {
+  margin: 0 0 0.4rem;
+  font-size: calc(1.05rem + var(--sp-text-bump));
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: #152232;
+  line-height: 1.3;
+}
+.sp-an-people__toolbar {
+  margin: 0 0 0.45rem;
+}
+.sp-an-people__lede {
+  margin: 0 0 0.2rem;
+  font-size: calc(0.8rem + var(--sp-text-bump));
+  line-height: 1.45;
+  color: #3d4a5a;
+}
+.sp-an-subcap {
+  margin: 0.5rem 0 0.3rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid #dce2e8;
+  font-size: calc(0.7rem + var(--sp-text-bump));
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6a7585;
+}
+.sp-an-people .sp-an-subcap:first-of-type {
+  margin-top: 0.15rem;
+  padding-top: 0;
+  border-top: 0;
+}
+.sp-an-people-scroll {
+  overflow: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #d0d6de;
+  padding: 0.35rem 0.45rem 0.55rem;
+}
+.sp-an-people__xnote {
+  margin: 0.65rem 0 0;
+  font-size: calc(0.76rem + var(--sp-text-bump));
+  line-height: 1.45;
+  color: #4a5562;
 }
 
 /* 인원 일×상품: 이번 달에 나온 internal_category 열(동적) + 총원 */
