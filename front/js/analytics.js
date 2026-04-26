@@ -16,6 +16,35 @@ const AN_CATEGORY_KEY_LABEL = {
   jasoseo: '자소서'
 };
 
+/** 보기 범위 셀렉트에 넣는 대분류(전체 제외) — 미분류·교재·자소서 제외 */
+const VIZ_SCOPE_DROPDOWN_KEYS = { solpass: true, solutine: true, challenge: true };
+
+/**
+ * `monthTotals` 전 카테고리 순매출 합(사이트 전체 합계용).
+ * @param {Record<string, {sales?: unknown, refund?: unknown}>|null|undefined} mt
+ * @return {number}
+ */
+function sumNetAllMonthTotals_(mt) {
+  let s = 0;
+  if (!mt || typeof mt !== 'object') {
+    return 0;
+  }
+  let k;
+  for (k in mt) {
+    if (!Object.prototype.hasOwnProperty.call(mt, k)) {
+      continue;
+    }
+    const t = mt[k];
+    if (!t || typeof t !== 'object') {
+      continue;
+    }
+    const sales = t.sales != null ? Number(t.sales) : 0;
+    const ref = t.refund != null ? Number(t.refund) : 0;
+    s += sales - ref;
+  }
+  return s;
+}
+
 /**
  * @param {string} scope
  * @param {string} key
@@ -203,7 +232,7 @@ function getAnFilterYm_(elP) {
   const m = parseInt(String(elP.filterM.value), 10);
   return {
     y: isFinite(y) ? y : yNow,
-    m: isFinite(m) && m >= 0 && m <= 12 ? m : mNow
+    m: isFinite(m) && m >= 1 && m <= 12 ? m : mNow
   };
 }
 
@@ -322,6 +351,7 @@ export function initAnalytics(mount) {
     tableWrap: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-tableWrap')),
     filterY: /** @type {HTMLSelectElement | null} */ (mount.querySelector('#sp-an-filterY')),
     filterM: /** @type {HTMLSelectElement | null} */ (mount.querySelector('#sp-an-filterM')),
+    btnKpiAnnual: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnKpiAnnual')),
     inY: /** @type {HTMLInputElement | null} */ (mount.querySelector('#sp-an-inY')),
     inM: /** @type {HTMLSelectElement | null} */ (mount.querySelector('#sp-an-inM')),
     inScope: /** @type {HTMLSelectElement | null} */ (mount.querySelector('#sp-an-inScope')),
@@ -376,6 +406,21 @@ export function initAnalytics(mount) {
   let _boundsMinYear = null;
   /** @type {number|null} */
   let _boundsMaxYear = null;
+  /** 목표(KPI) 표만 연도·월 0 행 필터 */
+  let _kpiAnnualRows = false;
+
+  function syncKpiAnnualBtn_() {
+    if (!el.btnKpiAnnual) {
+      return;
+    }
+    if (_kpiAnnualRows) {
+      el.btnKpiAnnual.classList.add('is-active');
+      el.btnKpiAnnual.setAttribute('aria-pressed', 'true');
+    } else {
+      el.btnKpiAnnual.classList.remove('is-active');
+      el.btnKpiAnnual.setAttribute('aria-pressed', 'false');
+    }
+  }
 
   function setHint(t, show) {
     if (!el.hint) {
@@ -761,7 +806,7 @@ export function initAnalytics(mount) {
     }
     el.filterY.value = String(ySel);
     const mSel = parseInt(curMStr, 10);
-    if (!isFinite(mSel) || mSel < 0 || mSel > 12) {
+    if (!isFinite(mSel) || mSel < 1 || mSel > 12) {
       el.filterM.value = String(mNow0);
     } else {
       el.filterM.value = String(mSel);
@@ -777,12 +822,18 @@ export function initAnalytics(mount) {
       return true;
     }
     const yf = parseInt(String(el.filterY.value), 10);
-    const mf = parseInt(String(el.filterM.value), 10);
-    if (!isFinite(yf) || !isFinite(mf)) {
+    if (!isFinite(yf)) {
       return true;
     }
     const yr = Math.floor(Number(r.year));
     const mr = Math.floor(Number(r.month));
+    if (_kpiAnnualRows) {
+      return yr === yf && mr === 0;
+    }
+    const mf = parseInt(String(el.filterM.value), 10);
+    if (!isFinite(mf)) {
+      return true;
+    }
     return yr === yf && mr === mf;
   }
 
@@ -805,10 +856,13 @@ export function initAnalytics(mount) {
     el.vizScope.appendChild(o0);
     for (let si = 0; si < order.length; si++) {
       const ck = String(order[si]);
+      if (!VIZ_SCOPE_DROPDOWN_KEYS[ck]) {
+        continue;
+      }
       const op = document.createElement('option');
       op.value = ck;
       const lab0 = AN_CATEGORY_KEY_LABEL[ck] != null ? AN_CATEGORY_KEY_LABEL[ck] : ck;
-      op.textContent = ck === 'textbook' || ck === 'jasoseo' ? lab0 + ' (대분류만)' : lab0 + ' (상품 행·단 교재/자소서는 대분류만)';
+      op.textContent = lab0 + ' (상품 행)';
       el.vizScope.appendChild(op);
     }
     if (Array.prototype.some.call(el.vizScope.options, function (o) { return o.value === prev; })) {
@@ -852,13 +906,7 @@ export function initAnalytics(mount) {
     const order0 = (report && report.categoryOrder) || [];
     let actualNet = 0;
     if (sc === 'entire') {
-      for (let ci = 0; ci < order0.length; ci++) {
-        const c = String(order0[ci]);
-        const t0 = mt[c];
-        if (t0) {
-          actualNet += (t0.sales != null ? Number(t0.sales) : 0) - (t0.refund != null ? Number(t0.refund) : 0);
-        }
-      }
+      actualNet = sumNetAllMonthTotals_(mt);
     } else {
       const t1 = mt[sc];
       if (t1) {
@@ -871,13 +919,7 @@ export function initAnalytics(mount) {
     const ptot = (pyRoll && pyRoll.monthTotals) || {};
     let prevNet = 0;
     if (sc === 'entire') {
-      for (let pi = 0; pi < order0.length; pi++) {
-        const c2 = String(order0[pi]);
-        const t2 = ptot[c2];
-        if (t2) {
-          prevNet += (t2.sales != null ? Number(t2.sales) : 0) - (t2.refund != null ? Number(t2.refund) : 0);
-        }
-      }
+      prevNet = sumNetAllMonthTotals_(ptot);
     } else {
       const t3 = ptot[sc];
       if (t3) {
@@ -968,6 +1010,9 @@ export function initAnalytics(mount) {
     }
     if (scp0 === 'entire') {
       for (let ci = 0; ci < order.length; ci++) {
+        if (String(order[ci]) === 'unmapped') {
+          continue;
+        }
         oneCatRow_(order[ci]);
       }
     } else if (scp0 === 'textbook' || scp0 === 'jasoseo') {
@@ -1071,15 +1116,7 @@ export function initAnalytics(mount) {
     const mt = (cur && cur.monthTotals) || {};
     let monthGrand = 0;
     if (scp0 === 'entire') {
-      for (let cj = 0; cj < order.length; cj++) {
-        const catj = String(order[cj]);
-        const t0 = mt[catj];
-        if (t0) {
-          const s3 = t0.sales != null ? Number(t0.sales) : 0;
-          const r3 = t0.refund != null ? Number(t0.refund) : 0;
-          monthGrand += s3 - r3;
-        }
-      }
+      monthGrand = sumNetAllMonthTotals_(mt);
     } else {
       const t4 = mt[scp0];
       if (t4) {
@@ -1657,33 +1694,6 @@ export function initAnalytics(mount) {
       return;
     }
     const ym = getAnFilterYm_(el);
-    if (ym.m < 1 || ym.m > 12) {
-      if (el.people) {
-        el.people.setAttribute('hidden', '');
-      }
-      if (el.ol) {
-        el.ol.setAttribute('hidden', '');
-      }
-      if (el.vizScopeStrip) {
-        el.vizScopeStrip.innerHTML = '';
-      }
-      if (el.vizLede) {
-        el.vizLede.textContent =
-          '일별 격자는 <strong>월 1–12</strong>일 때만 채워집니다. <strong>0(연간)</strong>은 위 실적·목표 표용이며 날짜 열은 없습니다.';
-      }
-      if (el.vizScroll) {
-        el.vizScroll.innerHTML = '';
-      }
-      if (el.vizWarn) {
-        el.vizWarn.setAttribute('hidden', '');
-        el.vizWarn.textContent = '';
-      }
-      if (el.vizPeriodMeta) {
-        el.vizPeriodMeta.textContent = '';
-      }
-      el.viz.removeAttribute('hidden');
-      return;
-    }
     if (el.vizLede) {
       el.vizLede.textContent =
         ym.y +
@@ -1803,6 +1813,9 @@ export function initAnalytics(mount) {
       if (localRows.length === 0) {
         tdE.textContent =
           '이 표는 목표만 보입니다. 위「실적 요약」이 동기화 주문 기준이고, 목표는 아래에서 한 줄씩 넣은 뒤「이 줄을 표에 넣기」를 누릅니다.';
+      } else if (_kpiAnnualRows) {
+        tdE.textContent =
+          '선택 연도에 월 0(연간) 목표 행이 없습니다. 연간 목표를 넣었는지, 연도를 바꿔 보세요.';
       } else {
         tdE.textContent =
           '지금 고른 연·월에 맞는 목표 행이 없습니다. 연도나 월을 바꿔 보세요.';
@@ -1828,6 +1841,7 @@ export function initAnalytics(mount) {
       });
     }
     paintActualsCompareUi_();
+    syncKpiAnnualBtn_();
   }
 
   function syncAnUi_() {
@@ -2067,6 +2081,13 @@ export function initAnalytics(mount) {
   if (el.filterM) {
     el.filterM.addEventListener('change', onAnPeriodChange_);
   }
+  if (el.btnKpiAnnual) {
+    el.btnKpiAnnual.addEventListener('click', function () {
+      _kpiAnnualRows = !_kpiAnnualRows;
+      syncKpiAnnualBtn_();
+      render();
+    });
+  }
 
   if (el.btnInit) {
     el.btnInit.addEventListener('click', async function () {
@@ -2266,6 +2287,7 @@ export function initAnalytics(mount) {
 
   syncAnUi_();
   rebuildFilterYearMonth_();
+  syncKpiAnnualBtn_();
 
   return {
     applyStateFromData: applyStateFromData,

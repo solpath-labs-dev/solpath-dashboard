@@ -431,6 +431,25 @@ code {
   min-width: 7.5rem;
 }
 
+.sp-an-filters--period {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sp-an-btnKpiAnnual {
+  font-size: calc(0.8rem + var(--sp-text-bump));
+  font-weight: 600;
+  padding: 0.45em 0.75em;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.sp-an-btnKpiAnnual.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 /* 매출: 요약 + 일별 표 단일 블록 */
 .sp-an-salesUnified {
   margin: 0 0 1rem;
@@ -442,7 +461,7 @@ code {
 
 .sp-an-salesUnified__h {
   margin: 0 0 0.35rem;
-  font-size: calc(0.92rem + var(--sp-text-bump));
+  font-size: calc(0.82rem + var(--sp-text-bump));
   font-weight: 650;
   color: #1a2430;
   letter-spacing: -0.015em;
@@ -530,7 +549,7 @@ code {
 
 .sp-an-metric-row2__title {
   margin: 0;
-  font-size: calc(0.88rem + var(--sp-text-bump));
+  font-size: calc(0.78rem + var(--sp-text-bump));
   font-weight: 650;
   color: #1a2430;
   letter-spacing: -0.01em;
@@ -607,7 +626,7 @@ code {
 }
 .sp-an-viz__h4 {
   margin: 0;
-  font-size: calc(0.88rem + var(--sp-text-bump));
+  font-size: calc(0.78rem + var(--sp-text-bump));
   font-weight: 650;
   color: #1a2430;
   letter-spacing: -0.01em;
@@ -694,6 +713,9 @@ code {
   text-overflow: ellipsis;
   background: #f4f6f8;
   border-right: 1px solid #8a96a5;
+}
+.sp-an-viz-table tbody td.sp-an-viz__row-lbl {
+  font-size: calc(0.62rem + var(--sp-text-bump));
 }
 .sp-an-viz-table th.sp-an-viz__row-h {
   z-index: 3;
@@ -822,7 +844,7 @@ code {
 }
 .sp-an-ol__title {
   margin: 0 0 0.35rem;
-  font-size: calc(0.95rem + var(--sp-text-bump));
+  font-size: calc(0.85rem + var(--sp-text-bump));
   font-weight: 600;
   color: #1a2430;
 }
