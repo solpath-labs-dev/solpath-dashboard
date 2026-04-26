@@ -9,12 +9,15 @@ credentials.json
 *.p12
 
 # --- 프론트: 배포·편집은 형제 -front; 모노레포엔 **소스(동기·검수)** + 핀·스니펫
+# 아래 `!` = 이 경로들은 **모노레포에서 일반 추적** 대상(규칙 뜻을 “안 된다”로 바꾸지 말 것).
+# 잘못 이해하지 말 것: `git add front` 한 방에만 시도 → 막히면 **이 파일 탓**이 아님. `front/.git`이 **중첩 클론**이면 상위는 embedded repo로만 잡힌다 → `front/.git`를 치우거나(백업 후 제거) **파일 단위** `git add front/js/…` / 형제 -front에만 푸시.
 front/*
 !front/
 !front/SOLPATH_CDN_COMMIT
 !front/IMWEB_SNIPPET_INJECT.html
 !front/IMWEB_SNIPPET.html
 !front/README.md
+!front/index.html
 !front/js/
 !front/js/**
 !front/css/
