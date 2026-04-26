@@ -1113,29 +1113,6 @@ export function initAnalytics(mount) {
     mtdC += '<td class="sp-an-viz__sum-col">' + fmtKrw_(monthGrand) + '</td></tr>';
     tbody += mtdC;
 
-    const py = report && report.previousYear && report.previousYear.roll;
-    let foot = '';
-    if (py && py.monthTotals) {
-      const ptot = py.monthTotals;
-      const bits = [];
-      for (let pi = 0; pi < order.length; pi++) {
-        const catp = String(order[pi]);
-        const t1 = ptot[catp];
-        if (!t1) {
-          continue;
-        }
-        const s4 = t1.sales != null ? Number(t1.sales) : 0;
-        const r4 = t1.refund != null ? Number(t1.refund) : 0;
-        const n4 = s4 - r4;
-        const lb =
-          AN_CATEGORY_KEY_LABEL[catp] != null ? AN_CATEGORY_KEY_LABEL[catp] : catp;
-        bits.push(esc(lb) + ' ' + fmtKrw_(n4));
-      }
-      if (bits.length) {
-        foot = '<p class="sp-an-viz__meta">전년 동월(순, 요약) · ' + bits.join(' · ') + '</p>';
-      }
-    }
-
     paintVizScopeStrip_(report, y, m);
     el.vizScroll.innerHTML =
       '<table class="sp-an-viz-table"><thead>' +
@@ -1143,8 +1120,7 @@ export function initAnalytics(mount) {
       theadDay +
       '</thead><tbody>' +
       tbody +
-      '</tbody></table>' +
-      foot;
+      '</tbody></table>';
   }
 
   function syncPeopleYMDefaults_(y, m) {
