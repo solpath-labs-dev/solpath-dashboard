@@ -441,12 +441,9 @@ export function initProductMapping(mount) {
 
     if (nTestAll > 0) {
       const nT = testRows.length;
-      const openTest = nT > 0 ? ' open' : '';
       parts.push('<div class="sp-pm-cat-block sp-pm-cat-block--lifecycle-test">');
       parts.push(
-        '<details class="sp-pm-cat sp-pm-cat--lifecycle-test"' +
-          openTest +
-          ' data-cat="lifecycle-test"><summary class="sp-pm-cat__sum"><span class="sp-pm-cat__title">상태·테스트' +
+        '<details class="sp-pm-cat sp-pm-cat--lifecycle-test" data-cat="lifecycle-test"><summary class="sp-pm-cat__sum"><span class="sp-pm-cat__title">상태·테스트' +
           '</span><span class="sp-pm-cat__badge">' +
           escAttr(String(nTestAll) + '개') +
           '</span> <span class="sp-pm-cat__n">' +
