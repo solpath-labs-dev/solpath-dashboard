@@ -203,12 +203,13 @@ function openSyncRouteAction_(action, e) {
   if (action === 'analyticsMasterActualsGet') {
     var pAc = e.parameter || {};
     var yAc = parseInt(String(pAc.year != null ? pAc.year : ''), 10);
-    var mAc = parseInt(String(pAc.month != null ? pAc.month : ''), 10);
+    var mRawAc = pAc.month != null ? String(pAc.month).trim() : '';
+    var mAc = mRawAc === '' ? NaN : parseInt(mRawAc, 10);
     var nowAc = new Date();
     if (!isFinite(yAc) || yAc < 2000 || yAc > 2100) {
       yAc = nowAc.getFullYear();
     }
-    if (!isFinite(mAc) || mAc < 1 || mAc > 12) {
+    if (!isFinite(mAc) || mAc < 0 || mAc > 12) {
       mAc = nowAc.getMonth() + 1;
     }
     return dbAnalyticsMasterActualsGet_(yAc, mAc);
@@ -246,7 +247,8 @@ function openSyncRouteAction_(action, e) {
     if (!isFinite(yRp) || yRp < 2000 || yRp > 2100) {
       yRp = nowP.getFullYear();
     }
-    if (!isFinite(mRp) || mRp < 1 || mRp > 12) {
+    /** 0 = 해당 연도 1~12월 일별(집계 02·dbAnalyticsFactReportComputed_와 동일) */
+    if (!isFinite(mRp) || mRp < 0 || mRp > 12) {
       mRp = nowP.getMonth() + 1;
     }
     return { ok: true, data: dbAnalyticsFactReportComputed_(yRp, mRp) };

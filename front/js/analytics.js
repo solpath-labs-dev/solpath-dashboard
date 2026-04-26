@@ -801,12 +801,12 @@ export function initAnalytics(mount) {
       el.actRow2ValA.textContent = ts != null && ts > 0 ? fmtKrw_(ts) : '—';
       el.actRow2ValB.textContent = to != null && to > 0 ? fmtInt_(to) : '—';
     } else {
-      el.actRow2Title.textContent = '전년 동월 실적';
+      el.actRow2Title.textContent = mv === 0 ? '전년도 실적(연간 합계)' : '전년 동월 실적';
       const py = pv.year != null ? Number(pv.year) : yv - 1;
       const pm = pv.month != null ? Number(pv.month) : mv;
       let sub = '';
       if (pm === 0) {
-        sub = py + '년(연간)';
+        sub = py + '년 1–12월 합계';
       } else {
         sub = py + '년 ' + pm + '월';
       }
@@ -2067,7 +2067,7 @@ export function initAnalytics(mount) {
       el.actualsWarn.textContent = '';
     }
     const ym = getAnFilterYm_(el);
-    const mCard = monthForActualsCard_(ym.y, ym.m);
+    const mCard = ym.m === 0 ? 0 : monthForActualsCard_(ym.y, ym.m);
     const url = String(GAS_BASE_URL).trim();
     _lastMasterActuals = null;
     paintActualsCompareUi_();
@@ -2096,11 +2096,8 @@ export function initAnalytics(mount) {
       _lastMasterActuals = { y: ym.y, m: mCard, d: d };
       paintActualsCompareUi_();
       if (el.actualsWarn && ym.m === 0) {
-        el.actualsWarn.textContent =
-          '월이 「전체」일 때 일별 순매출은 그 해 1~12월입니다. 위 실적 카드·목표 비교는 ' +
-          mCard +
-          '월 기준입니다.';
-        el.actualsWarn.removeAttribute('hidden');
+        el.actualsWarn.setAttribute('hidden', '');
+        el.actualsWarn.textContent = '';
       }
     } catch (e) {
       _lastMasterActuals = null;

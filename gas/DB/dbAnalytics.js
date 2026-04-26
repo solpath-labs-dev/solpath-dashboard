@@ -1038,6 +1038,30 @@ function dbAnOrderTimeToYearMonth_(s) {
 }
 
 /**
+ * 주문시각 → 비교용 ms (최신 라인 선택). 파싱 실패 시 -Infinity
+ * @param {string|Date|number} v
+ * @return {number}
+ */
+function dbAnOrderTimeToMs_(v) {
+  if (v == null || v === '') {
+    return Number.NEGATIVE_INFINITY;
+  }
+  if (v instanceof Date) {
+    var tx = v.getTime();
+    return isNaN(tx) ? Number.NEGATIVE_INFINITY : tx;
+  }
+  var ds = new Date(String(v).trim());
+  if (!isNaN(ds.getTime())) {
+    return ds.getTime();
+  }
+  var ym = dbAnOrderTimeToYearMonth_(v);
+  if (isFinite(ym.y) && isFinite(ym.m)) {
+    return new Date(ym.y, ym.m - 1, 15).getTime();
+  }
+  return Number.NEGATIVE_INFINITY;
+}
+
+/**
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
  * @param {number} y
  * @param {number} m 0=해당 연도 전체, 1–12=그 달
@@ -1104,12 +1128,12 @@ var DB_AN_AGG_EXCLUDE_CATEGORY = { unmapped: true, textbook: true, jasoseo: true
  * `DB_AN_AGG_EXCLUDE_CATEGORY` 대분류 줄 제외 후 순매출(매출−환불)·주문 건수(고유 order_no).
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ssA 집계 스프레드시트
  * @param {number} y
- * @param {number} m 1–12
+ * @param {number} m 0 = 해당 연도 1–12월 전부, 1–12 = 해당 월만
  * @return {{ netSales: number, orderCount: number }}
  */
 function dbAnSalesCardsMetricsFrom02_(ssA, y, m) {
   var z = { netSales: 0, orderCount: 0 };
-  if (!ssA || !isFinite(y) || !isFinite(m) || m < 1 || m > 12) {
+  if (!ssA || !isFinite(y) || !isFinite(m) || m < 0 || m > 12) {
     return z;
   }
   var sh = dbAnGetOrderLinesSheet_(ssA);
@@ -1151,8 +1175,10 @@ function dbAnSalesCardsMetricsFrom02_(ssA, y, m) {
     if (parseInt(pr2[0], 10) !== y) {
       continue;
     }
-    if (parseInt(pr2[1], 10) !== m) {
-      continue;
+    if (m !== 0) {
+      if (parseInt(pr2[1], 10) !== m) {
+        continue;
+      }
     }
     var claim2 = String(L2[7] != null ? L2[7] : '').trim();
     var isRe = claim2 === 'cancel' || claim2 === 'return';
@@ -1205,17 +1231,21 @@ function dbAnSalesCardsMetricsFrom02_(ssA, y, m) {
 }
 
 /**
- * 상단 실적 카드 — 집계 시트 `02_주문라인_실적` 기준 (마스터 orders 아님). 전년 동월은 prev 블록.
+ * 상단 실적 카드 — 집계 시트 `02_주문라인_실적` 기준 (마스터 orders 아님).
+ * m이 1–12면 해당 월·전년 동월, m이 0이면 해당 연도·전년도 각각 1–12월 합계.
  * @param {number} y
- * @param {number} m 1–12
+ * @param {number} m 0 = 연도 합계, 1–12 = 해당 월
  * @return {{ ok: true, data: Object }|{ ok: false, error: { code: string, message: string } }}
  */
 function dbAnalyticsMasterActualsGet_(y, m) {
   if (typeof y !== 'number' || !isFinite(y) || y < 2000 || y > 2100) {
     return { ok: false, error: { code: 'BAD_REQUEST', message: 'year(2000–2100)이 필요합니다.' } };
   }
-  if (typeof m !== 'number' || !isFinite(m) || m < 1 || m > 12) {
-    return { ok: false, error: { code: 'BAD_REQUEST', message: 'month는 1–12가 필요합니다. (집계 02 기준)' } };
+  if (typeof m !== 'number' || !isFinite(m) || m < 0 || m > 12 || Math.floor(m) !== m) {
+    return {
+      ok: false,
+      error: { code: 'BAD_REQUEST', message: 'month는 0(연도 합계) 또는 1–12가 필요합니다. (집계 02 기준)' }
+    };
   }
   var ssA;
   try {
@@ -1700,10 +1730,12 @@ function dbAnBuildSalesCountHierarchy_(rows) {
 
 /**
  * `02_주문라인_실적`에서 prod_no → prod_name (프론트 격자 라벨용)
+ * 같은 상품번호라도 **order_time이 가장 늦은 라인**의 스냅샷 이름을 쓴다(시트 행 순서 무관).
  * @return {Object<string, string>}
  */
 function dbAnalytics02ProdNameMap_() {
   var out = {};
+  var bestMs = {};
   var ssA;
   try {
     ssA = dbAnOpenOrThrow_();
@@ -1716,13 +1748,21 @@ function dbAnalytics02ProdNameMap_() {
   }
   var lr = sh.getLastRow();
   var nR = Math.max(0, lr - 1);
-  var v = nR > 0 ? sh.getRange(2, 5, nR, 2).getValues() : [];
+  /** 열 4~6: order_time, prod_no, prod_name */
+  var v = nR > 0 ? sh.getRange(2, 4, nR, 3).getValues() : [];
   var j;
   for (j = 0; j < v.length; j++) {
     var row = v[j] || [];
-    var pk = dbPmRowKey_(row[0]);
-    if (pk.length) {
-      out[pk] = String(row[1] != null ? row[1] : '').trim() || '상품 ' + pk;
+    var pk = dbPmRowKey_(row[1]);
+    if (!pk.length) {
+      continue;
+    }
+    var tMs = dbAnOrderTimeToMs_(row[0]);
+    var nm = String(row[2] != null ? row[2] : '').trim() || '상품 ' + pk;
+    var cur = bestMs[pk];
+    if (cur === undefined || tMs >= cur) {
+      bestMs[pk] = tMs;
+      out[pk] = nm;
     }
   }
   return out;
