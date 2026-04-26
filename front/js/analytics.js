@@ -1,5 +1,5 @@
 /**
- * 일/월간 매출 및 인원 지표 — GAS JSONP
+ * 매출·구매 인원(품목 줄) 지표 — GAS JSONP
  */
 import { GAS_BASE_URL, GAS_MODE } from './config.js';
 import { aggregateFactRows, daysInMonth, lineCountsByMonthCategoryYear, startOfBlockWeekInMonth } from './analyticsVizModule.js';
@@ -132,11 +132,19 @@ function errMsg_(r) {
     return '응답이 없습니다.';
   }
   if (typeof r.error === 'string' && r.error.length) {
+    if (r.error === 'UNKNOWN_ACTION') {
+      return '서버(웹앱)가 아직 이 요청을 모릅니다. Apps Script를 최신 코드로 다시 배포했는지 확인해 주세요.';
+    }
     return r.error;
   }
   var msg = '';
-  if (r.error && typeof r.error === 'object' && r.error.message) {
-    msg = String(r.error.message);
+  if (r.error && typeof r.error === 'object') {
+    if (r.error.code === 'UNKNOWN_ACTION' || r.error.message === 'UNKNOWN_ACTION') {
+      return '서버(웹앱)가 아직 이 요청을 모릅니다. Apps Script를 최신 코드로 다시 배포했는지 확인해 주세요.';
+    }
+    if (r.error.message) {
+      msg = String(r.error.message);
+    }
   } else if (r.message) {
     msg = String(r.message);
   }
@@ -335,6 +343,9 @@ export function initAnalytics(mount) {
     peopleWarn: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-peopleWarn')),
     peopleGrid: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-peopleGrid')),
     peopleMatrix: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-peopleMatrix')),
+    peopleYearDetails: /** @type {HTMLDetailsElement | null} */ (
+      mount.querySelector('#sp-an-peopleYearDetails')
+    ),
     ol: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-ol')),
     olScroll: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-olScroll')),
     olWarn: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-olWarn'))
@@ -683,7 +694,10 @@ export function initAnalytics(mount) {
       gSales != null && isFinite(gSales) && gSales > 0
         ? ' 달성률 ' + ((actualNet / gSales) * 100).toFixed(1) + '%'
         : '';
-    const vsPrev = pAvail && isFinite(prevNet) ? '전년 동월(순) ' + fmtKrw_(prevNet) + '. ' : '전년 데이터 없음(동월 fact 비었거나 02 기준). ';
+    const vsPrev =
+      pAvail && isFinite(prevNet)
+        ? '전년 동월(순) ' + fmtKrw_(prevNet) + '. '
+        : '전년 데이터 없음(동월 집계가 비었을 수 있습니다). ';
     el.vizSummary.innerHTML =
       '<div class="sp-an-viz__summarybox">' +
       '<p class="sp-an-viz__summaryp"><strong>목표(매출)</strong> ' +
@@ -714,9 +728,9 @@ export function initAnalytics(mount) {
     if (!order.length) {
       const scpEmpty = (el.vizScope && el.vizScope.value) || 'entire';
       renderVizSummary_(report, y, m, scpEmpty);
-      el.vizTitle && (el.vizTitle.textContent = '일별 순매출 · ' + y + '년 ' + m + '월');
+      el.vizTitle && (el.vizTitle.textContent = '솔루션편입 · 일별 순매출 · ' + y + '년 ' + m + '월');
       el.vizScroll.innerHTML =
-        '<p class="sp-an-viz__empty">대분류 데이터가 없어 표를 만들지 못했습니다. 02 실적이 비었거나 fact가 아직 없을 수 있습니다.</p>';
+        '<p class="sp-an-viz__empty">대분류 데이터가 없어 표를 만들지 못했습니다. 집계가 비었거나 아직 만들어지지 않았을 수 있습니다.</p>';
       return;
     }
     const scp0 = (el.vizScope && el.vizScope.value) || 'entire';
@@ -799,7 +813,10 @@ export function initAnalytics(mount) {
         tbody += '<tr><th scope="row" class="sp-an-viz__row-lbl sp-an-viz__row-lbl--prod">↳ ' + esc(labP) + '</th>' + tdsP + '</tr>';
       }
       if (!pList.length) {
-        tbody += '<tr><th colspan="' + (daysN + 2) + '" class="sp-an-viz__empty">이 대분류에 잡힌 상품 라인(fact)이 이 달에 없습니다.</th></tr>';
+        tbody +=
+          '<tr><th colspan="' +
+          (daysN + 2) +
+          '" class="sp-an-viz__empty">이 대분류에 잡힌 품목 줄이 이 달에 없습니다.</th></tr>';
       }
     }
 
@@ -924,7 +941,7 @@ export function initAnalytics(mount) {
     }
 
     renderVizSummary_(report, y, m, scp0);
-    el.vizTitle && (el.vizTitle.textContent = '일별 순매출 · ' + y + '년 ' + m + '월');
+    el.vizTitle && (el.vizTitle.textContent = '솔루션편입 · 일별 순매출 · ' + y + '년 ' + m + '월');
     el.vizScroll.innerHTML =
       '<table class="sp-an-viz-table"><thead>' +
       theadWeek +
@@ -961,6 +978,75 @@ export function initAnalytics(mount) {
   }
 
   /**
+   * 연도별 월×상품군 표 — `details`를 펼쳤을 때만 호출 (year 전체 fact 요청).
+   * @param {string} base
+   * @param {number} useY
+   * @return {Promise<void>}
+   */
+  async function loadPeopleYearMatrix_(base, useY) {
+    if (!el.peopleMatrix) {
+      return;
+    }
+    el.peopleMatrix.innerHTML = '<p class="sp-an-viz__empty">불러오는 중…</p>';
+    try {
+      if (!_peopleYearRows || _peopleY !== useY) {
+        const rY0 = await gasJsonpWithParams(
+          base,
+          'analyticsFactRowsGet',
+          { year: String(useY), month: '0' },
+          120000
+        );
+        _peopleYearRows = rY0 && rY0.ok && rY0.data && rY0.data.rows ? rY0.data.rows : [];
+        _peopleY = useY;
+      }
+      const byMC =
+        _peopleYearRows && _peopleYearRows.length
+          ? lineCountsByMonthCategoryYear(_peopleYearRows, useY)
+          : {};
+      const co0 = _vizReport && _vizReport.categoryOrder ? _vizReport.categoryOrder : [];
+      const ordC = co0 && co0.length ? co0 : Object.keys(AN_CATEGORY_KEY_LABEL);
+      let tHH = '<tr><th class="sp-an-viz__row-h" scope="col">상품군</th>';
+      let mc;
+      for (mc = 1; mc <= 12; mc++) {
+        tHH += '<th scope="col">' + mc + '월</th>';
+      }
+      tHH += '<th class="sp-an-viz__sum-col" scope="col">연 합(품목 줄)</th></tr>';
+      const nowL = new Date();
+      const yNow0 = nowL.getFullYear();
+      const mNow0 = nowL.getMonth() + 1;
+      let tBB = '';
+      for (let oi0 = 0; oi0 < ordC.length; oi0++) {
+        const cname = String(ordC[oi0]);
+        const labC = AN_CATEGORY_KEY_LABEL[cname] != null ? AN_CATEGORY_KEY_LABEL[cname] : cname;
+        tBB += '<tr><th scope="row" class="sp-an-viz__row-lbl">' + esc(labC) + '</th>';
+        let rTot = 0;
+        for (mc = 1; mc <= 12; mc++) {
+          if (useY > yNow0 || (useY === yNow0 && mc > mNow0)) {
+            tBB += '<td class="sp-an-people__dash">–</td>';
+            continue;
+          }
+          const cell0 = (byMC[mc] && byMC[mc][cname]) != null ? Number(byMC[mc][cname]) : 0;
+          rTot += cell0;
+          tBB += '<td>' + (cell0 ? fmtInt_(cell0) : '0') + '</td>';
+        }
+        tBB += '<td class="sp-an-viz__sum-col">' + fmtInt_(rTot) + '</td></tr>';
+      }
+      el.peopleMatrix.innerHTML =
+        '<p class="sp-an-viz__empty sp-an-people-matrix__caption">' +
+        esc(String(useY)) +
+        '년 1~12월 품목 줄 수(같은 해·상품군·월별 합). 아직 지나지 않은 달은 비웁니다.</p>' +
+        '<table class="sp-an-viz-table sp-an-people__matrix"><thead>' +
+        tHH +
+        '</thead><tbody>' +
+        tBB +
+        '</tbody></table>';
+    } catch (_e) {
+      el.peopleMatrix.innerHTML =
+        '<p class="sp-an-viz__empty">연도 표를 불러오지 못했습니다. 위에서 연도를 확인한 뒤 다시 펼쳐 보세요.</p>';
+    }
+  }
+
+  /**
    * @param {string} base
    * @param {number} y fact 필터 연도(또는 최근에 불러온 격자 기준)
    * @param {number} m fact 필터 월(1~12) — `alignFromFilter`가 참이면 인원 Y/M이 여기에 맞춤
@@ -993,13 +1079,17 @@ export function initAnalytics(mount) {
     const useM = isFinite(pm0) && pm0 >= 1 && pm0 <= 12 ? pm0 : m;
     if (el.peopleLede) {
       el.peopleLede.textContent =
-        '라인 건수는 주문 품목 줄(가상 line_count) 합입니다. 아래 연간 표는 ' + useY + '년·월·대분류 기준입니다.';
+        useY +
+        '년 ' +
+        useM +
+        '월 — 품목 줄 수(한 주문 안의 품목 줄)입니다. 연도·월 합계 표는 아래를 펼쳐야 불러옵니다.';
     }
     if (el.peopleGrid) {
       el.peopleGrid.innerHTML = '<p class="sp-an-viz__empty">불러오는 중…</p>';
     }
-    if (el.peopleMatrix) {
-      el.peopleMatrix.innerHTML = '<p class="sp-an-viz__empty">불러오는 중…</p>';
+    if (el.peopleMatrix && (!el.peopleYearDetails || !el.peopleYearDetails.open)) {
+      el.peopleMatrix.innerHTML =
+        '<p class="sp-an-viz__empty">연도·월·상품군 합계 표는 위 항목을 펼치면 이 자리에서 불러옵니다.</p>';
     }
     try {
       var rUse = /** @type {Object[]} */ ([]);
@@ -1075,11 +1165,11 @@ export function initAnalytics(mount) {
         theg +=
           '<th class="sp-an-viz__sum-col sp-an-people__col--cat sp-an-people__col--c' +
           cmod +
-          '" scope="col" title="internal_category">' +
+          '" scope="col">' +
           esc(labH) +
           '</th>';
       }
-      theg += '<th class="sp-an-viz__sum-col sp-an-people__col--tot" scope="col">총원(건)</th></tr>';
+      theg += '<th class="sp-an-viz__sum-col sp-an-people__col--tot" scope="col">품목 줄 합(건)</th></tr>';
       const sumByCat = /** @type {Record<string, number>} */ ({});
       for (let si = 0; si < uniqueCats.length; si++) {
         sumByCat[String(uniqueCats[si])] = 0;
@@ -1120,7 +1210,7 @@ export function initAnalytics(mount) {
       }
       if (!pSorted.length) {
         const nc = 2 + daysN2 + (uniqueCats.length > 0 ? uniqueCats.length : 0) + 1;
-        tbG = '<tr><td colspan="' + nc + '" class="sp-an-viz__empty">이 달 fact 라인이 없습니다.</td></tr>';
+        tbG = '<tr><td colspan="' + nc + '" class="sp-an-viz__empty">이 달 품목 줄이 없습니다.</td></tr>';
       }
       let sumB = '<tr class="sp-an-people__sumrow"><th scope="row">일 합(건)</th>';
       let ssum = 0;
@@ -1154,51 +1244,12 @@ export function initAnalytics(mount) {
         el.peopleGrid.innerHTML = '<table class="sp-an-viz-table sp-an-people__grid">' + theg + tbG + sumB + '</table>';
       }
 
-      if (!_peopleYearRows || _peopleY !== useY) {
-        const rY0 = await gasJsonpWithParams(
-          base,
-          'analyticsFactRowsGet',
-          { year: String(useY), month: '0' },
-          120000
-        );
-        _peopleYearRows = rY0 && rY0.ok && rY0.data && rY0.data.rows ? rY0.data.rows : [];
-        _peopleY = useY;
-      }
-      const byMC = _peopleYearRows && _peopleYearRows.length ? lineCountsByMonthCategoryYear(_peopleYearRows, useY) : {};
-      const co0 = _vizReport && _vizReport.categoryOrder ? _vizReport.categoryOrder : [];
-      const ordC = (co0 && (co0).length) ? co0 : Object.keys(AN_CATEGORY_KEY_LABEL);
-      let tHH = '<tr><th class="sp-an-viz__row-h" scope="col">대분류</th>';
-      let mc;
-      for (mc = 1; mc <= 12; mc++) {
-        tHH += '<th scope="col">' + mc + '월</th>';
-      }
-      tHH += '<th class="sp-an-viz__sum-col" scope="col">총(건, −제외)</th></tr>';
-      const nowL = new Date();
-      const yNow0 = nowL.getFullYear();
-      const mNow0 = nowL.getMonth() + 1;
-      let tBB = '';
-      for (let oi0 = 0; oi0 < ordC.length; oi0++) {
-        const cname = String(ordC[oi0]);
-        const labC = AN_CATEGORY_KEY_LABEL[cname] != null ? AN_CATEGORY_KEY_LABEL[cname] : cname;
-        tBB += '<tr><th scope="row" class="sp-an-viz__row-lbl">' + esc(labC) + '</th>';
-        let rTot = 0;
-        for (mc = 1; mc <= 12; mc++) {
-          if (useY > yNow0 || (useY === yNow0 && mc > mNow0)) {
-            tBB += '<td class="sp-an-people__dash">–</td>';
-            continue;
-          }
-          const cell0 = (byMC[mc] && byMC[mc][cname]) != null ? Number(byMC[mc][cname]) : 0;
-          rTot += cell0;
-          tBB += '<td>' + (cell0 ? fmtInt_(cell0) : '0') + '</td>';
-        }
-        tBB += '<td class="sp-an-viz__sum-col">' + fmtInt_(rTot) + '</td></tr>';
-      }
-      if (el.peopleMatrix) {
-        el.peopleMatrix.innerHTML = '<table class="sp-an-viz-table sp-an-people__matrix"><thead>' + tHH + '</thead><tbody>' + tBB + '</tbody></table>';
+      if (el.peopleYearDetails && el.peopleYearDetails.open) {
+        await loadPeopleYearMatrix_(base, useY);
       }
     } catch (e) {
       if (el.peopleWarn) {
-        el.peopleWarn.textContent = '인원 격자를 못 그렸습니다.';
+        el.peopleWarn.textContent = '품목 줄 표를 그리지 못했습니다.';
         el.peopleWarn.removeAttribute('hidden');
       }
     }
@@ -1220,6 +1271,26 @@ export function initAnalytics(mount) {
     }
     el.peopleM.addEventListener('change', onPeopleCh_);
     el.peopleY.addEventListener('change', onPeopleCh_);
+  }
+
+  if (el.peopleYearDetails) {
+    el.peopleYearDetails.addEventListener('toggle', function () {
+      if (!el.peopleYearDetails.open) {
+        if (el.peopleMatrix) {
+          el.peopleMatrix.innerHTML =
+            '<p class="sp-an-viz__empty">연도·월·상품군 합계 표는 위 항목을 펼치면 이 자리에서 불러옵니다.</p>';
+        }
+        return;
+      }
+      if (!ready || GAS_MODE.useMock || !GAS_MODE.canSync) {
+        return;
+      }
+      const base0 = String(GAS_BASE_URL).trim();
+      const py =
+        el.peopleY != null && el.peopleY.value ? parseInt(el.peopleY.value, 10) : _vizY;
+      const useYy = isFinite(py) ? py : _vizY;
+      void loadPeopleYearMatrix_(base0, useYy);
+    });
   }
 
   if (el.vizScope) {
@@ -1258,7 +1329,7 @@ export function initAnalytics(mount) {
       el.olWarn.setAttribute('hidden', '');
       el.olWarn.textContent = '';
     }
-    el.olScroll.innerHTML = '<p class="sp-an-viz__empty">02 라인을 불러오는 중…</p>';
+    el.olScroll.innerHTML = '<p class="sp-an-viz__empty">품목 줄을 불러오는 중…</p>';
     try {
       const r = await gasJsonpWithParams(
         base,
@@ -1268,7 +1339,7 @@ export function initAnalytics(mount) {
       );
       if (!r || !r.ok) {
         if (el.olWarn) {
-          el.olWarn.textContent = formatHintWithErrorCode_(r) || '02를 불러오지 못했습니다.';
+          el.olWarn.textContent = formatHintWithErrorCode_(r) || '품목 줄을 불러오지 못했습니다.';
           el.olWarn.removeAttribute('hidden');
         }
         el.olScroll.innerHTML = '';
@@ -1280,11 +1351,14 @@ export function initAnalytics(mount) {
       const truncated = d0.truncated === true;
       if (truncated && el.olWarn) {
         el.olWarn.textContent =
-          '응답이 길어 이 표는 처음 ' + rows.length + '건만 담겼습니다. (상한: 대량 라인) 나머지는 드라이브 02를 직접 보세요.';
+          '응답이 길어 이 표는 처음 ' +
+          rows.length +
+          '건만 담겼습니다. 나머지는 드라이브 집계 시트에서 직접 보세요.';
         el.olWarn.removeAttribute('hidden');
       }
       if (!rows.length) {
-        el.olScroll.innerHTML = '<p class="sp-an-viz__empty">이 달 02에 주문일이 잡힌 라인이 없습니다.</p>';
+        el.olScroll.innerHTML =
+          '<p class="sp-an-viz__empty">이 달 주문일이 있는 품목 줄이 없습니다.</p>';
         return;
       }
       let h =
@@ -1293,9 +1367,9 @@ export function initAnalytics(mount) {
         '<th class="sp-an-viz__row-h" scope="col">주문번호</th>' +
         '<th class="sp-an-viz__row-h" scope="col">상품</th>' +
         '<th class="sp-an-viz__row-h" scope="col">대분류</th>' +
-        '<th class="sp-an-viz__row-h" scope="col">report_as</th>' +
+        '<th class="sp-an-viz__row-h" scope="col">집계 기준 상품</th>' +
         '<th class="sp-an-viz__row-h" scope="col">마지막 인정일</th>' +
-        '<th class="sp-an-viz__row-h" scope="col">x 확정</th>' +
+        '<th class="sp-an-viz__row-h" scope="col">집계 제외 확정</th>' +
         '<th class="sp-an-viz__row-h" scope="col"></th></tr></thead><tbody>';
       for (let io = 0; io < rows.length; io++) {
         const row = rows[io] || {};
@@ -1320,7 +1394,7 @@ export function initAnalytics(mount) {
           '<td>' + esc(catDisp) + '</td>' +
           '<td>' + esc(rap0) + '</td>' +
           '<td><input type="date" class="sp-confirm sp-an-ol-date" value="' + esc(lrd0) + '"/></td>' +
-          '<td class="sp-an-ol__cell-x"><input type="checkbox" class="sp-an-ol-x" aria-label="x로 인정 끊기 확정"' +
+          '<td class="sp-an-ol__cell-x"><input type="checkbox" class="sp-an-ol-x" aria-label="집계에서 이 줄 제외 확정"' +
           (xset0 ? ' checked' : '') +
           ' /></td>' +
           '<td><button type="button" class="btn btn--secondary sp-an-ol-save">저장</button></td></tr>';
@@ -1329,7 +1403,7 @@ export function initAnalytics(mount) {
       el.olScroll.innerHTML = h;
     } catch (e) {
       if (el.olWarn) {
-        el.olWarn.textContent = '02를 불러오지 못했습니다.';
+        el.olWarn.textContent = '품목 줄을 불러오지 못했습니다.';
         el.olWarn.removeAttribute('hidden');
       }
       el.olScroll.innerHTML = '';
@@ -1378,7 +1452,8 @@ export function initAnalytics(mount) {
         btn.disabled = false;
         if (r0 && r0.ok) {
           if (el.olWarn) {
-            el.olWarn.textContent = '저장했습니다. (시트 02 + 집계 fact는 갱신 루틴/새로고침 뒤에 맞습니다.)';
+            el.olWarn.textContent =
+          '저장했습니다. 집계 숫자는 시트·화면을 갱신한 뒤에 맞춰집니다.';
             el.olWarn.removeAttribute('hidden');
           }
         } else {
@@ -1901,8 +1976,8 @@ export function initAnalytics(mount) {
         const wn = d1.written != null && isFinite(Number(d1.written)) ? Number(d1.written) : null;
         setHint(
           wn != null
-            ? '01·02 탭을 맞추고 주문라인 ' + wn + '행을 다시 썼습니다.'
-            : '01·02 탭을 맞추고 마스터에서 주문라인을 다시 채웠습니다.',
+            ? '집계 시트를 맞추고 품목 줄 ' + wn + '행을 갱신했습니다.'
+            : '집계 시트를 맞추고 마스터에서 품목 줄을 다시 채웠습니다.',
           true
         );
         await loadTargets();

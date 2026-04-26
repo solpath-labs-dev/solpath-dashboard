@@ -12,7 +12,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
         </div>
         <div class="sp-intro-wrap">
           <div class="sp-intro-card sp-intro-card--an" id="sp-introAn" aria-hidden="false">
-            <p class="sp-intro-title">일/월간 매출 및 인원 지표 · 사용 안내</p>
+            <p class="sp-intro-title">매출·구매 인원(라인) 지표 · 사용 안내</p>
             <ul class="sp-intro-list">
               <li><strong>이 탭</strong>은 실제 <strong>매출(원) 목표</strong>와 <strong>인원(건수) 목표</strong>를 <strong>숫자로</strong> 모아 두는 곳입니다. <strong>꺾은선·막대 그래프는 없고</strong>, <strong>표(칸)</strong>로만 보고 고칩니다. (연동·상품분류·이 목표는 <strong>드라이브에 파일이 셋</strong>으로 갈립니다.)</li>
               <li><strong>드라이브에 저장</strong>을 누르면, 아래 표에 올라와 있는 <strong>목표 줄</strong>이 <strong>팀 구글 드라이브</strong>의 <strong>이 지표용 파일</strong>에 담깁니다. <strong>처음 한 번</strong>은 <strong>데이터 생성</strong>이 필요할 수 있고, <strong>생성이 안 될 때</strong>는 <strong>「데이터 동기화」</strong>를 한번 실행한 뒤에 다시 시도합니다.</li>
@@ -35,7 +35,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
             <p class="sp-intro-title">상품 항목 분류 · 사용 안내</p>
             <ul class="sp-intro-list">
               <li>팀에서 정한 흐름으로, <strong>연동 수치·원천</strong>은 <strong>「데이터 동기화」</strong> 쪽 <strong>드라이브 파일</strong>에 쌓고, <strong>각 품목이 어느 강좌/상품군에 붙는지, 지금 어떻게 취급할지</strong>는 <strong>「상품 항목 분류」</strong>에 쓰는 <strong>드라이브</strong>에 적어 둡니다. 그 파일 안 <strong>「상품 매핑(분류)」</strong>이 <strong>저장해 두는 쪽(맨 앞/위)</strong>입니다. 위 <strong>구글 드라이브(상품·분류)</strong>로 갑니다.</li>
-              <li><strong>내부 대분류</strong>는 품목을 <strong>어느 상품군(솔패스·솔루틴·챌린지·교재·자소서·미분류)</strong>으로 묶어 볼지에 대한 <strong>큰 꼬리표</strong>입니다. <strong>일/월간 매출 및 인원 지표</strong>를 <strong>같은 묶음으로</strong> 잡을 때 맞춥니다.</li>
+              <li><strong>내부 대분류</strong>는 품목을 <strong>어느 상품군(솔패스·솔루틴·챌린지·교재·자소서·미분류)</strong>으로 묶어 볼지에 대한 <strong>큰 꼬리표</strong>입니다. <strong>매출·구매 인원</strong> 탭을 <strong>같은 묶음으로</strong> 잡을 때 맞춥니다.</li>
               <li><strong>상태</strong>는 <strong>같은 품목도 운영·노출을 어떻게 볼지</strong>를 나눈 값입니다. <strong>진행</strong>은 지금 취급하는 판매 품목, <strong>만료</strong>는 <strong>상품은 판매 대상이지만(상품이 살아 있지만) 판매(노출) 기간이 끝난</strong> 경우, <strong>테스트</strong>는 시험·검수용, <strong>(구)상품</strong>은 <strong>판매를 완전히 끝냈거나, 대체 상품이 올라와 예전 품목으로만</strong> 보는 경우에 맞춥니다.</li>
               <li><strong>회원·주문 반영</strong>은 <strong>데이터 동기화</strong> 탭에서, <strong>이 탭</strong>에서는 품목 <strong>분류·상태</strong>만 손댑니다. 파일이 아직 없으면 <strong>상품 불러오기</strong>로 먼저 만듭니다.</li>
               <li>드롭다운을 바꾼 뒤 <strong>수정하기</strong>를 눌러 <strong>구글 쪽</strong>에 반영합니다. 끝나면 잠시 뒤 목록이 다시 그려집니다. 바꾼 내용이 없으면 <strong>수정하기</strong>는 켜지지 않습니다.</li>
@@ -57,7 +57,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
             aria-selected="true"
             aria-controls="sp-panel-an"
             tabindex="0"
-          >일/월간 매출 및 인원 지표</button>
+          >매출·구매 인원</button>
           <button
             type="button"
             class="sp-tabs__btn"
@@ -95,7 +95,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
         >
           <div class="panel panel--hero" id="sp-an-root">
             <div class="panel__head sp-an-head">
-              <h2 class="sp-panel-eyebrow" id="sp-an-eyebrow">일/월간 매출 및 인원 지표</h2>
+              <h2 class="sp-panel-eyebrow" id="sp-an-eyebrow">솔루션편입 · 매출·구매 인원</h2>
               <div class="sp-an-head__right" id="sp-an-external" hidden>
                 <button type="button" class="btn btn--secondary" id="sp-an-btnRepair" hidden>
                   탭·주문라인 갱신
@@ -112,9 +112,12 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
             </div>
             <div class="sp-confirm-block sp-an-block" id="sp-an-block">
               <p class="sp-confirm-instruct" id="sp-an-instruct">
-                <strong>데이터 동기화</strong>로 올라온 주문을 기준으로 <strong>실매출·주문 수</strong>를 봅니다. <strong>목표(KPI)</strong>는 아래에서만 적으며, 비교는 <strong>전년 동기</strong> 실적으로 할 수 있습니다. <strong>드라이브에 저장</strong>은 목표 표를 쓸 때만 필요합니다.
+                아래는 <strong>매출 현황</strong>과 <strong>구매 인원(라인) 현황</strong> 두 덩어리로 나뉩니다. 숫자는 모두 <strong>데이터 동기화</strong> 주문을 기준으로 하며, 목표·드라이브 저장은 매출 쪽에서만 씁니다.
               </p>
               <p class="sp-pm__hint" id="sp-an-hint" hidden></p>
+              <div class="sp-an-pillar sp-an-pillar--sales" id="sp-an-pillarSales">
+                <h2 class="sp-an-pillar__title">매출 현황</h2>
+                <p class="sp-an-pillar__lede">기간 합계, 일별 순매출 표, 집계에 쓰는 품목 줄 확인·수정, 목표(KPI) 입력까지 이어집니다.</p>
               <div class="sp-an-actuals" id="sp-an-actuals" hidden>
                 <h3 class="sp-an-actuals__h">선택 기간 실적</h3>
                 <p class="sp-an-actuals__lede" id="sp-an-actualsLede" aria-live="polite">기간을 바꾸면 카드 숫자가 맞춰집니다. 「전체」는 <strong>이번 달</strong>입니다.</p>
@@ -132,7 +135,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                 <p class="sp-an-actuals__warn" id="sp-an-actualsWarn" hidden></p>
               </div>
               <div class="sp-an-viz" id="sp-an-viz" hidden>
-                <h2 class="sp-an-viz__title" id="sp-an-vizTitle">일별 순매출</h2>
+                <h3 class="sp-an-viz__title" id="sp-an-vizTitle">솔루션편입 · 일별 순매출</h3>
                 <div class="sp-an-viz__toolbar" id="sp-an-vizToolbar">
                   <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">보기 범위</span>
                     <select class="sp-confirm" id="sp-an-vizScope" title="사이트 전체(대분류 행) 또는 한 대분류(상품 행)">
@@ -140,34 +143,16 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                     </select>
                   </label>
                 </div>
-                <p class="sp-an-viz__lede" id="sp-an-vizLede">월을 고르면 <strong>일자 열 × 대분류(또는 상품) 행</strong>으로 순매출을 봅니다. 교재·자소서는 행을 쪼개지 않습니다.</p>
+                <p class="sp-an-viz__lede" id="sp-an-vizLede">위 [기간]에서 월까지 고르면, <strong>가로 날짜 · 세로 상품군(또는 단품)</strong> 격자로 순매출을 봅니다. 교재·자소서는 상품군만 묶습니다.</p>
                 <p class="sp-an-viz__warn" id="sp-an-vizWarn" hidden></p>
                 <div class="sp-an-viz__summary" id="sp-an-vizSummary" aria-label="목표·전년"></div>
                 <div class="sp-an-viz-scroll" id="sp-an-vizScroll" role="region" aria-label="일별 순매출 표"></div>
               </div>
-              <div class="sp-an-people" id="sp-an-people" hidden>
-                <h2 class="sp-an-people__title">주문 라인 건수</h2>
-                <div class="sp-an-people__toolbar" id="sp-an-peopleToolbar">
-                  <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">연</span>
-                    <input type="number" class="sp-confirm" id="sp-an-peopleY" min="2000" max="2100" step="1" title="라인 건수 표 연도" />
-                  </label>
-                  <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">월</span>
-                    <select class="sp-confirm" id="sp-an-peopleM" title="라인 건수 표 월"></select>
-                  </label>
-                </div>
-                <p class="sp-an-people__lede" id="sp-an-peopleLede">같은 월의 fact 기준으로, 일별·대분류별 <strong>주문 라인 수</strong>를 봅니다. 아래 두 표는 연·월 선택에 맞춰집니다.</p>
-                <p class="sp-an-people__warn" id="sp-an-peopleWarn" hidden></p>
-                <p class="sp-an-subcap">이 달 · 일별 × 상품</p>
-                <div class="sp-an-people-scroll" id="sp-an-peopleGrid" role="region" aria-label="이 달 일자별 라인 건수"></div>
-                <p class="sp-an-subcap">한 해 · 월별 × 대분류</p>
-                <div class="sp-an-people-scroll" id="sp-an-peopleMatrix" role="region" aria-label="연도 월별 대분류 라인 건수"></div>
-                <p class="sp-an-people__xnote" id="sp-an-peopleXnote">맨 아래 <strong>주문라인</strong>에서 인정일·<strong>x</strong>·<code>report_as</code>를 고치면 02 시트에 반영됩니다.</p>
-              </div>
               <div class="sp-an-ol" id="sp-an-ol" hidden>
-                <h2 class="sp-an-ol__title">주문라인 인정 편집</h2>
-                <p class="sp-an-ol__lede" id="sp-an-olLede">선택한 달·주문일 기준으로 02를 불러옵니다. 행이 많으면 일부만 보일 수 있습니다.</p>
+                <h3 class="sp-an-ol__title">품목 줄 · 인정일·집계 반영</h3>
+                <p class="sp-an-ol__lede" id="sp-an-olLede">위 [기간]과 같은 달·주문일 기준으로 품목 줄을 불러옵니다. 여기서 바꾼 인정일·집계 제외 여부는 드라이브 집계 시트에도 반영됩니다. 행이 많으면 일부만 보일 수 있습니다.</p>
                 <p class="sp-an-ol__warn" id="sp-an-olWarn" hidden></p>
-                <div class="sp-an-ol-scroll" id="sp-an-olScroll" role="region" aria-label="주문라인 인정 편집"></div>
+                <div class="sp-an-ol-scroll" id="sp-an-olScroll" role="region" aria-label="품목 줄 인정·집계 반영"></div>
               </div>
               <div class="sp-pm__loading" id="sp-an-loading" hidden>불러오는 중</div>
               <div class="sp-pm-init" id="sp-an-init" hidden>
@@ -193,7 +178,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                           <th>연</th>
                           <th>월</th>
                           <th>범위</th>
-                          <th>적는 값</th>
+                          <th>대상</th>
                           <th class="sp-an-table__em-sales">매출목표(원)</th>
                           <th class="sp-an-table__em-count">건수목표</th>
                           <th>비고</th>
@@ -205,25 +190,25 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                   </div>
                 </div>
                 <div class="sp-an-add" id="sp-an-form">
-                  <p class="sp-an-add__title">목표 입력(한 줄씩)</p>
-                  <div class="sp-an-add__row">
-                    <label>연 <input type="number" class="sp-confirm" id="sp-an-inY" min="2000" max="2100" step="1" /></label>
-                    <label>월
+                  <p class="sp-an-add__title">목표 한 줄 입력</p>
+                  <div class="sp-an-add__row sp-an-add__row--inline">
+                    <label class="sp-an-add__field"><span class="sp-an-add__lbl">연</span> <input type="number" class="sp-confirm" id="sp-an-inY" min="2000" max="2100" step="1" /></label>
+                    <label class="sp-an-add__field"><span class="sp-an-add__lbl">월</span>
                       <select class="sp-confirm" id="sp-an-inM" title="0은 연간"></select>
                     </label>
-                    <label>범위
+                    <label class="sp-an-add__field"><span class="sp-an-add__lbl">범위</span>
                       <select class="sp-confirm" id="sp-an-inScope">
                         <option value="category">대분류</option>
                         <option value="product">상품</option>
                       </select>
                     </label>
-                    <label>적는 값 <input type="text" class="sp-confirm" id="sp-an-inKey" placeholder="예: 솔패스, 미분류 또는 상품 번호" spellcheck="false" /></label>
-                    <label>매출(원) <input type="number" class="sp-confirm" id="sp-an-inAmt" min="0" step="1" /></label>
-                    <label>건수 <input type="number" class="sp-confirm" id="sp-an-inCnt" min="0" step="1" /></label>
-                  </div>
-                  <label class="sp-an-add__notes">비고
+                    <label class="sp-an-add__field sp-an-add__field--grow"><span class="sp-an-add__lbl">대상</span> <input type="text" class="sp-confirm" id="sp-an-inKey" placeholder="대분류 이름 또는 상품 번호" spellcheck="false" /></label>
+                    <label class="sp-an-add__field"><span class="sp-an-add__lbl">매출(원)</span> <input type="number" class="sp-confirm" id="sp-an-inAmt" min="0" step="1" /></label>
+                    <label class="sp-an-add__field"><span class="sp-an-add__lbl">건수</span> <input type="number" class="sp-confirm" id="sp-an-inCnt" min="0" step="1" /></label>
+                    <label class="sp-an-add__field sp-an-add__field--grow"><span class="sp-an-add__lbl">비고</span>
                     <input type="text" class="sp-confirm" id="sp-an-inNotes" maxlength="200" />
-                  </label>
+                    </label>
+                  </div>
                   <div class="sp-an-add__ctas">
                     <button type="button" class="btn btn--secondary" id="sp-an-btnAdd">이 줄을 표에 넣기</button>
                     <button type="button" class="btn btn--primary" id="sp-an-btnSave">지금 드라이브에 다시 저장</button>
@@ -232,6 +217,31 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                 </div>
                 </details>
               </div>
+              </div>
+
+              <div class="sp-an-pillar sp-an-pillar--buyers" id="sp-an-pillarBuyers">
+                <h2 class="sp-an-pillar__title">구매 인원 현황</h2>
+                <p class="sp-an-pillar__lede">한 번의 주문 안의 품목 줄(건)을 세어, 날짜·상품군별로 봅니다. 사람 수가 아니라 <strong>품목 줄 수</strong>입니다.</p>
+              <div class="sp-an-people" id="sp-an-people" hidden>
+                <div class="sp-an-people__toolbar" id="sp-an-peopleToolbar">
+                  <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">연도</span>
+                    <input type="number" class="sp-confirm" id="sp-an-peopleY" min="2000" max="2100" step="1" title="표에 쓸 연도" />
+                  </label>
+                  <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">월</span>
+                    <select class="sp-confirm" id="sp-an-peopleM" title="이 달 일별 표에 쓸 월"></select>
+                  </label>
+                </div>
+                <p class="sp-an-people__lede" id="sp-an-peopleLede">이 달 표는 선택한 연·월의 품목 줄 수입니다. 연도별 월 합계는 아래를 펼친 뒤에만 불러옵니다.</p>
+                <p class="sp-an-people__warn" id="sp-an-peopleWarn" hidden></p>
+                <p class="sp-an-subcap">이 달 — 날짜별 × 품목</p>
+                <div class="sp-an-people-scroll" id="sp-an-peopleGrid" role="region" aria-label="이 달 일자별 품목 줄 수"></div>
+                <details class="sp-an-people-year" id="sp-an-peopleYearDetails">
+                  <summary class="sp-an-people-year__sum">연도별 월 합계 · 상품군별 (연도 선택 후 펼치면 불러옴)</summary>
+                  <div class="sp-an-people-scroll" id="sp-an-peopleMatrix" role="region" aria-label="선택 연도 월별 상품군 줄 수"></div>
+                </details>
+              </div>
+              </div>
+
             </div>
           </div>
         </section>

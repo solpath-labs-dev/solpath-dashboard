@@ -295,7 +295,7 @@ code {
   margin-bottom: 0.75rem;
 }
 
-/* 탭당 드라이브 1:1 — 왼쪽부터: 일/월간 매출 및 인원 지표, 데이터 동기화, 상품 항목 분류 */
+/* 탭당 드라이브 1:1 — 왼쪽부터: 매출·구매 인원, 데이터 동기화, 상품 항목 분류 */
 .sp-sync-head__right,
 .sp-pm-head__right,
 .sp-an-head__right {
@@ -304,6 +304,73 @@ code {
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem 0.75rem;
+}
+
+.sp-an-pillar {
+  margin: 0 0 1.35rem;
+  padding: 1rem 1.05rem 1.15rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fafbfd;
+}
+.sp-an-pillar--sales {
+  border-left: 4px solid #0b5cad;
+}
+.sp-an-pillar--buyers {
+  border-left: 4px solid #0d7a5c;
+}
+.sp-an-pillar__title {
+  margin: 0 0 0.35rem;
+  font-size: calc(1.14rem + var(--sp-text-bump));
+  font-weight: 700;
+  color: #152232;
+  letter-spacing: -0.02em;
+}
+.sp-an-pillar__lede {
+  margin: 0 0 0.9rem;
+  font-size: calc(0.84rem + var(--sp-text-bump));
+  line-height: 1.45;
+  color: #3d4a5a;
+  max-width: 52rem;
+}
+.sp-an-pillar--sales .sp-an-actuals {
+  margin-top: 0;
+}
+.sp-an-pillar--sales .sp-an-viz {
+  margin-top: 0.85rem;
+}
+.sp-an-pillar--sales .sp-an-ol {
+  margin-top: 0.85rem;
+}
+.sp-an-pillar--buyers .sp-an-people {
+  margin-top: 0;
+}
+
+.sp-an-people-year {
+  margin-top: 0.65rem;
+  border: 1px solid #d0d6de;
+  border-radius: 8px;
+  padding: 0.4rem 0.65rem 0.7rem;
+  background: #fff;
+}
+.sp-an-people-year__sum {
+  cursor: pointer;
+  font-size: calc(0.84rem + var(--sp-text-bump));
+  font-weight: 600;
+  color: #1a2430;
+  list-style: none;
+}
+.sp-an-people-year__sum::-webkit-details-marker {
+  display: none;
+}
+.sp-an-people-year[open] .sp-an-people-year__sum {
+  margin-bottom: 0.45rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+.sp-an-people-matrix__caption {
+  margin: 0 0 0.5rem !important;
+  color: #4a5562 !important;
 }
 
 .sp-an-subtabs {
@@ -839,32 +906,40 @@ code {
   margin-bottom: 0.45rem;
 }
 
-.sp-an-add__row label {
+.sp-an-add__row--inline {
+  align-items: flex-end;
+}
+
+.sp-an-add__field {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   font-size: calc(0.82rem + var(--sp-text-bump));
   color: var(--muted);
   font-weight: 600;
+}
+
+.sp-an-add__field--grow {
+  flex: 1 1 11rem;
+  min-width: 8rem;
+}
+
+.sp-an-add__field--grow .sp-confirm {
+  width: 100%;
+  min-width: 0;
+}
+
+.sp-an-add__lbl {
+  font: inherit;
+  color: inherit;
 }
 
 .sp-an-add__row .sp-confirm {
   min-width: 5rem;
 }
 
-.sp-an-add__notes {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: calc(0.82rem + var(--sp-text-bump));
-  color: var(--muted);
-  font-weight: 600;
-  margin-bottom: 0.55rem;
-}
-
-.sp-an-add__notes .sp-confirm {
-  width: 100%;
-  max-width: 28rem;
+.sp-an-add__row--inline .sp-confirm {
+  min-width: 4.5rem;
 }
 
 .sp-an-add__ctas {
