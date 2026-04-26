@@ -117,13 +117,30 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
               <p class="sp-pm__hint" id="sp-an-hint" hidden></p>
               <div class="sp-an-pillar sp-an-pillar--sales" id="sp-an-pillarSales">
                 <h2 class="sp-an-pillar__title">매출 현황</h2>
-                <p class="sp-an-pillar__lede">기간 합계, 일별 순매출 표, 집계에 쓰는 품목 줄 확인·수정, 목표(KPI) 입력까지 이어집니다.</p>
-              <div class="sp-an-actuals" id="sp-an-actuals" hidden>
-                <h3 class="sp-an-actuals__h">선택 기간 실적</h3>
-                <p class="sp-an-actuals__lede" id="sp-an-actualsLede" aria-live="polite">첫 줄은 이번 기간 실매출·주문입니다. 막대·(±%)는 <strong>전체(사이트) 목표</strong>가 있으면 그 목표, 없으면 <strong>전년 동월</strong> 대비입니다. 둘째 줄은 같은 기간의 목표 또는 전년 실적입니다.</p>
+                <p class="sp-an-pillar__lede">선택 연·월 요약과 일별 순매출 표, 품목 줄·목표(KPI) 입력까지 한 흐름으로 이어집니다.</p>
+              <div class="sp-an-salesUnified" id="sp-an-actuals" hidden>
+                <h3 class="sp-an-salesUnified__h">매출 · 선택 기간</h3>
+                <p class="sp-an-salesUnified__lede" id="sp-an-actualsLede" aria-live="polite">위 <strong>연·월</strong>은 실적 카드·아래 일별 표·목표 표를 같이 맞춥니다. 첫 줄 카드는 실매출·주문, 막대·(±%)는 <strong>전체(사이트) 목표</strong>가 있으면 그 목표, 없으면 <strong>전년 동월</strong> 대비입니다.</p>
                 <div class="sp-an-filters" id="sp-an-filters">
-                  <label class="sp-an-filters__f sp-an-filters__f--wide"><span class="sp-pm-filters__lbl">기간</span>
-                    <select class="sp-confirm" id="sp-an-filterPeriod" title="실적 카드·아래 표·목표 행 필터를 같은 기간으로 맞춥니다"></select>
+                  <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">연도</span>
+                    <select class="sp-confirm" id="sp-an-filterY" title="실적·표·목표 필터 연도"></select>
+                  </label>
+                  <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">월</span>
+                    <select class="sp-confirm" id="sp-an-filterM" title="실적·표·목표 필터 월 (0=연간 목표 행)">
+                      <option value="0">0(연간)</option>
+                      <option value="1">1월</option>
+                      <option value="2">2월</option>
+                      <option value="3">3월</option>
+                      <option value="4">4월</option>
+                      <option value="5">5월</option>
+                      <option value="6">6월</option>
+                      <option value="7">7월</option>
+                      <option value="8">8월</option>
+                      <option value="9">9월</option>
+                      <option value="10">10월</option>
+                      <option value="11">11월</option>
+                      <option value="12">12월</option>
+                    </select>
                   </label>
                 </div>
                 <div class="sp-an-actuals__cards sp-an-actuals__cards--tworow" id="sp-an-actualsCards" aria-label="선택 기간 실적·비교">
@@ -163,23 +180,26 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                   </div>
                 </div>
                 <p class="sp-an-actuals__warn" id="sp-an-actualsWarn" hidden></p>
-              </div>
-              <div class="sp-an-viz" id="sp-an-viz" hidden>
-                <h3 class="sp-an-viz__title" id="sp-an-vizTitle">솔루션편입 · 일별 순매출</h3>
-                <div class="sp-an-viz__toolbar" id="sp-an-vizToolbar">
-                  <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">보기 범위</span>
-                    <select class="sp-confirm" id="sp-an-vizScope" title="사이트 전체(대분류 행) 또는 한 대분류(상품 행)">
-                      <option value="entire">전체(사이트) — 대분류 행</option>
-                    </select>
-                  </label>
+                <div class="sp-an-vizSection" id="sp-an-viz" hidden>
+                  <div class="sp-an-viz__subhead">
+                    <h4 class="sp-an-viz__h4" id="sp-an-vizHeading"><span class="sp-an-viz__h4-main">일별 순매출</span> <span class="sp-an-viz__h4-meta" id="sp-an-vizPeriodMeta"></span></h4>
+                    <div class="sp-an-viz__toolbar" id="sp-an-vizToolbar">
+                      <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">보기 범위</span>
+                        <select class="sp-confirm" id="sp-an-vizScope" title="사이트 전체(대분류 행) 또는 한 대분류(상품 행)">
+                          <option value="entire">전체(사이트) — 대분류 행</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="sp-an-viz__scopeStrip" id="sp-an-vizScopeStrip" aria-label="보기 범위 기준 요약"></div>
+                  <p class="sp-an-viz__lede" id="sp-an-vizLede">월을 1–12로 고르면 <strong>가로 날짜 · 세로 상품군(또는 단품)</strong> 격자로 순매출을 봅니다.</p>
+                  <p class="sp-an-viz__warn" id="sp-an-vizWarn" hidden></p>
+                  <div class="sp-an-viz-scroll" id="sp-an-vizScroll" role="region" aria-label="일별 순매출 표"></div>
                 </div>
-                <p class="sp-an-viz__lede" id="sp-an-vizLede">위 [기간]에서 월까지 고르면, <strong>가로 날짜 · 세로 상품군(또는 단품)</strong> 격자로 순매출을 봅니다. 교재·자소서는 상품군만 묶습니다.</p>
-                <p class="sp-an-viz__warn" id="sp-an-vizWarn" hidden></p>
-                <div class="sp-an-viz-scroll" id="sp-an-vizScroll" role="region" aria-label="일별 순매출 표"></div>
               </div>
               <div class="sp-an-ol" id="sp-an-ol" hidden>
                 <h3 class="sp-an-ol__title">품목 줄 · 인정일·집계 반영</h3>
-                <p class="sp-an-ol__lede" id="sp-an-olLede">위 [기간]과 같은 달·주문일 기준으로 품목 줄을 불러옵니다. 여기서 바꾼 인정일·집계 제외 여부는 드라이브 집계 시트에도 반영됩니다. 행이 많으면 일부만 보일 수 있습니다.</p>
+                <p class="sp-an-ol__lede" id="sp-an-olLede">위에서 고른 <strong>연·월</strong>과 같은 달·주문일 기준으로 품목 줄을 불러옵니다. 여기서 바꾼 인정일·집계 제외 여부는 드라이브 집계 시트에도 반영됩니다. 행이 많으면 일부만 보일 수 있습니다.</p>
                 <p class="sp-an-ol__warn" id="sp-an-olWarn" hidden></p>
                 <div class="sp-an-ol-scroll" id="sp-an-olScroll" role="region" aria-label="품목 줄 인정·집계 반영"></div>
               </div>
@@ -198,7 +218,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                   <button type="button" class="sp-an-subtabs__btn" id="sp-an-subCount" role="tab" aria-selected="false" aria-controls="sp-an-tableWrap" tabindex="-1">건수</button>
                 </div>
                 <p class="sp-an-subtabs__lede" id="sp-an-subLede" aria-live="polite">아래 <strong>목표</strong> 표에서 <strong>매출(원)</strong> 열이 더 잘 보이게 켠 상태입니다.</p>
-                <p class="sp-an-table-legend" id="sp-an-tableLegend">▸ <strong>기간</strong>에 맞는 <strong>목표</strong> 행만 남깁니다(위 <strong>실적 요약</strong>과 별개로, 여기만 손으로 적습니다). 목표가 없으면 <strong>전년 동기</strong> 실적으로 비교하세요.</p>
+                <p class="sp-an-table-legend" id="sp-an-tableLegend">▸ 위 <strong>연·월</strong>에 맞는 <strong>목표</strong> 행만 남깁니다(실적 카드와 별개로, 여기만 손으로 적습니다). 목표가 없으면 <strong>전년 동기</strong> 실적으로 비교하세요.</p>
                 <div class="sp-an-table-wrap" id="sp-an-tableWrap" role="tabpanel" aria-labelledby="sp-an-subSales">
                   <div class="sp-an-table-scroll">
                     <table class="sp-an-table sp-an-table--mode-sales" id="sp-an-table">

@@ -3,11 +3,67 @@
  */
 
 /**
+ * 마스터 `orders.order_time` 스캔 — 대시보드 기간 선택의 **연도 하한·상한**(데이터 없으면 null).
+ * @return {{ minYear: ?number, maxYear: ?number }}
+ */
+function dbAnalyticsOrderYearBoundsForUi_() {
+  var empty = { minYear: null, maxYear: null };
+  var ss;
+  try {
+    ss = dbOpenMaster_();
+  } catch (e) {
+    return empty;
+  }
+  var sh = ss.getSheetByName(DB_SHEET_ORDERS);
+  if (!sh || sh.getLastRow() < 2) {
+    return empty;
+  }
+  var lr = sh.getLastRow();
+  var colTime = 2;
+  var minY = 100000;
+  var maxY = 0;
+  var BATCH = 4000;
+  var r0;
+  for (r0 = 2; r0 <= lr; r0 += BATCH) {
+    var r1 = Math.min(r0 + BATCH - 1, lr);
+    var vals = sh.getRange(r0, colTime, r1, colTime).getValues();
+    var j;
+    for (j = 0; j < vals.length; j++) {
+      var ymd = dbAnAnyToSeoulYmd_(vals[j][0]);
+      if (!ymd || ymd.length < 4) {
+        continue;
+      }
+      var yy = parseInt(ymd.slice(0, 4), 10);
+      if (!isFinite(yy)) {
+        continue;
+      }
+      if (yy < minY) {
+        minY = yy;
+      }
+      if (yy > maxY) {
+        maxY = yy;
+      }
+    }
+  }
+  if (minY === 100000) {
+    return empty;
+  }
+  return { minYear: minY, maxYear: maxY };
+}
+
+/**
  * `dbProductMappingState_` 응답 data에 합칠 필드
  * @param {Object} data
  * @return {Object}
  */
 function dbMergeAnalyticsIntoPmData_(data) {
+  var yb = dbAnalyticsOrderYearBoundsForUi_();
+  if (yb.minYear != null) {
+    data.analyticsOrderMinYear = yb.minYear;
+  }
+  if (yb.maxYear != null) {
+    data.analyticsOrderMaxYear = yb.maxYear;
+  }
   var a = dbAnalyticsStateFields_();
   data.analyticsReady = a.analyticsReady;
   data.analyticsReason = a.reason != null ? a.reason : '';
