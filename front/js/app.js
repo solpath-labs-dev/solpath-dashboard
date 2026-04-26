@@ -33,7 +33,10 @@ function resolveCdnBuildMeta_() {
   let fromModule = '';
   try {
     const u = import.meta.url;
-    const m = u.match(/solpath-dashboard-front@([0-9a-fA-F]{7,40})\//i);
+    let m = u.match(/solpath-dashboard-front@([0-9a-fA-F]{7,40})\//i);
+    if (!m) {
+      m = u.match(/solpath-dashboard@([0-9a-fA-F]{7,40})\/front\//i);
+    }
     if (m) {
       fromModule = m[1].toLowerCase();
     }
@@ -78,7 +81,7 @@ function stampCdnBuild_() {
         fromModule +
         ' / 스니펫 ' +
         fromSnippet +
-        ' — 임웹·스니펫·-front 푸시를 맞출 것';
+        ' — 임웹·스니펫·GitHub 커밋을 맞출 것';
     }
     el.setAttribute('title', tip);
     el.removeAttribute('hidden');

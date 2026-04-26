@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# solpath-dashboard-front → jsDelivr URL에 쓰는 커밋을 **한 파일**에서 읽어
-# 반드시 `front/SOLPATH_CDN_COMMIT`을 **최종**으로 쓴 **다음**에만 실행(병렬 X). 상위: git-push-dual-remotes.mdc.
-# front/IMWEB_SNIPPET_INJECT.html, IMWEB_SNIPPET.html 안의
-#   .../solpath-dashboard-front@<이전 sha>/...
-# 를 전부 **같은** SHA로 맞춘다. (3daeb43 / 17f4945 / @main 섞이는 실수 방지)
+# jsDelivr 핀: `SOLPATH_CDN_COMMIT` 풀 SHA → IMWEB_* 의 URL·주석·cdnCommit 일괄 치환
+# 모노레포: .../solpath-dashboard@<sha>/front/…  ·  구 -front 전용 URL도 호환 치환
+# 반드시 `front/SOLPATH_CDN_COMMIT`을 **최종**으로 쓴 **다음**에만 실행(병렬 X).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PIN="${ROOT}/SOLPATH_CDN_COMMIT"
@@ -26,6 +24,8 @@ for f in "${ROOT}/IMWEB_SNIPPET_INJECT.html" "${ROOT}/IMWEB_SNIPPET.html"; do
     exit 1
   fi
   perl -i -pe '
+    s/(eunsang9597\/solpath-dashboard@)[0-9a-fA-F]+/${1}$ENV{NEW}/g;
+    s/(solpath-labs-dev\/solpath-dashboard@)[0-9a-fA-F]+/${1}$ENV{NEW}/g;
     s/(eunsang9597\/solpath-dashboard-front@)[0-9a-fA-F]+/${1}$ENV{NEW}/g;
     s/(solpath-labs-dev\/solpath-dashboard-front@)[0-9a-fA-F]+/${1}$ENV{NEW}/g;
     s/(cdnCommit:\s*")([0-9a-fA-F]+)"/$1$ENV{NEW}"/g;
@@ -37,4 +37,4 @@ for f in "${ROOT}/IMWEB_SNIPPET_INJECT.html" "${ROOT}/IMWEB_SNIPPET.html"; do
   }
   echo "OK $f  →  @$NEW"
 done
-echo "끝. solpath-dashboard-front 는 이 SHA와 동일한 내용이어야 임웹·미리보기가 일치한다."
+echo "끝. GitHub solpath-dashboard(또는 -front) 해당 커밋과 동일해야 임웹·미리보기가 일치한다."
