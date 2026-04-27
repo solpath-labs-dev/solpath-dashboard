@@ -2573,9 +2573,6 @@ export function initAnalytics(mount) {
     if (!GAS_MODE.canSync || GAS_MODE.useMock) {
       return;
     }
-    if (!ready) {
-      return;
-    }
     if (!el.filterY || !el.filterM || !el.valSales || !el.valOrders) {
       return;
     }
@@ -2769,9 +2766,6 @@ export function initAnalytics(mount) {
   }
 
   function onAnPeriodChange_() {
-    if (!ready) {
-      return;
-    }
     void loadMasterActuals_();
     void loadFactViz_();
     render();
