@@ -11,7 +11,15 @@ import {
   lineCountsByMonthCategoryYear
 } from './analyticsVizModule.js';
 
-const SCOPE_LABEL = { category: '대분류', product: '상품' };
+/** 실적 목표 표·시트 `goal_target` — 일별 매출 보기 범위와 동일한 네 가지 + 전체 */
+const KPI_GOAL_TARGET_OPTIONS = [
+  { value: 'entire', label: '전체' },
+  { value: 'solpass', label: '솔패스' },
+  { value: 'challenge', label: '챌린지' },
+  { value: 'solutine', label: '솔루틴' }
+];
+/** @type {Record<string, boolean>} */
+const KPI_GOAL_TARGET_SET = { entire: true, solpass: true, challenge: true, solutine: true };
 
 /** 시트·API용 영문 키 → 표에만 한글 (저장 값은 그대로) */
 const AN_CATEGORY_KEY_LABEL = {
@@ -26,8 +34,8 @@ const AN_CATEGORY_KEY_LABEL = {
 /** 보기 범위 셀렉트에 넣는 대분류(전체 제외) — 상품군 미정·교재·자소서 제외 */
 const VIZ_SCOPE_DROPDOWN_KEYS = { solpass: true, solutine: true, challenge: true };
 
-/** 상단 실적·전년·목표 비교 축 — 주문 실적 집계 기준, 상품군 미정·교재·자소서 제외 */
-const AN_ACTUAL_EXCL_NOTE = ' (상품군 미정·교재·자소서 제외)';
+/** 상단 실적·전년·목표 비교 축 — 주문 실적 집계 기준, 상품군 미정·자소서 제외(교재 포함) */
+const AN_ACTUAL_EXCL_NOTE = ' (상품군 미정·자소서 제외)';
 
 /**
  * `monthTotals` 전 카테고리 순매출 합(사이트 전체 합계용).
@@ -134,18 +142,25 @@ function vizYmdExcludedFromYearGrid_(ymd, todayYmd, minDataYmd) {
 }
 
 /**
- * @param {string} scope
- * @param {string} key
+ * @param {unknown} gt goal_target (entire|solpass|…)
  */
-function displayScopeValueForTable_(scope, key) {
-  const k = String(key != null ? key : '').trim();
-  if (!k.length) {
-    return '—';
+function kpiGoalTargetLabel_(gt) {
+  const g = String(gt != null ? gt : '')
+    .trim()
+    .toLowerCase();
+  if (g === 'entire') {
+    return '전체';
   }
-  if (String(scope) === 'product') {
-    return '상품 번호 ' + k;
+  if (g === 'solpass') {
+    return '솔패스';
   }
-  return AN_CATEGORY_KEY_LABEL[k] != null ? AN_CATEGORY_KEY_LABEL[k] : k;
+  if (g === 'challenge') {
+    return '챌린지';
+  }
+  if (g === 'solutine') {
+    return '솔루틴';
+  }
+  return AN_CATEGORY_KEY_LABEL[g] != null ? AN_CATEGORY_KEY_LABEL[g] : g || '—';
 }
 
 /**
@@ -250,14 +265,21 @@ function errMsg_(r) {
   }
   if (typeof r.error === 'string' && r.error.length) {
     if (r.error === 'UNKNOWN_ACTION') {
-      return '서버(웹앱)가 아직 이 요청을 모릅니다. Apps Script를 최신 코드로 다시 배포했는지 확인해 주세요.';
+      return '아직 이 기능이 연결 프로그램에 반영되지 않았을 수 있습니다. 담당자에게 문의해 주세요.';
+    }
+    if (r.error === 'SYNC_FAILED') {
+      const hm = r.message != null ? String(r.message) : '';
+      return hm.length ? hm : '동기화 중 문제가 생겼습니다. 잠시 뒤 다시 시도해 주세요.';
+    }
+    if (/^[A-Z][A-Z0-9_]+$/.test(r.error)) {
+      return '요청이 처리되지 않았습니다. 잠시 뒤 다시 시도하거나 담당자에게 알려 주세요.';
     }
     return r.error;
   }
   var msg = '';
   if (r.error && typeof r.error === 'object') {
     if (r.error.code === 'UNKNOWN_ACTION' || r.error.message === 'UNKNOWN_ACTION') {
-      return '서버(웹앱)가 아직 이 요청을 모릅니다. Apps Script를 최신 코드로 다시 배포했는지 확인해 주세요.';
+      return '아직 이 기능이 연결 프로그램에 반영되지 않았을 수 있습니다. 담당자에게 문의해 주세요.';
     }
     if (r.error.message) {
       msg = String(r.error.message);
@@ -299,11 +321,7 @@ function logSolpathApi_(action, result, caught) {
  * @param {object|null|undefined} r
  */
 function formatHintWithErrorCode_(r) {
-  var m = errMsg_(r) || '요청이 완료되지 않았습니다.';
-  if (r && r.error && typeof r.error === 'object' && r.error.code) {
-    m += ' [코드: ' + String(r.error.code) + ']';
-  }
-  return m;
+  return errMsg_(r) || '요청이 완료되지 않았습니다. 잠시 뒤 다시 시도하거나 담당자에게 알려 주세요.';
 }
 
 /**
@@ -481,18 +499,19 @@ export function applyAnalyticsHeaderUrls(mount, d) {
 function rowToPayload_(r) {
   const y = Math.floor(Number(r.year));
   const mo = Math.floor(Number(r.month));
-  const sc = String(r.scope != null ? r.scope : '').trim();
-  const sk = String(r.scopeKey != null ? r.scopeKey : r.scope_key != null ? r.scope_key : '').trim();
-  const gt0 = String(r.goal_target != null ? r.goal_target : '').trim();
+  const gt0 = String(r.goal_target != null ? r.goal_target : '').trim().toLowerCase();
+  const sk = String(r.scopeKey != null ? r.scopeKey : r.scope_key != null ? r.scope_key : '').trim().toLowerCase();
   const goalTarget = gt0 || sk;
+  const ta = Math.max(0, Number(r.targetAmount != null ? r.targetAmount : r.target_amount != null ? r.target_amount : 0));
+  const tc = Math.max(0, Number(r.targetCount != null ? r.targetCount : r.target_count != null ? r.target_count : 0));
   return {
     year: y,
     month: mo,
     goal_target: goalTarget,
-    scope: sc === 'product' ? 'product' : 'category',
-    scopeKey: sk,
-    targetAmount: Math.max(0, Number(r.targetAmount != null ? r.targetAmount : r.target_amount != null ? r.target_amount : 0)),
-    targetCount: Math.max(0, Number(r.targetCount != null ? r.targetCount : r.target_count != null ? r.target_count : 0)),
+    sales_target: ta,
+    people_target: tc,
+    targetAmount: ta,
+    targetCount: tc,
     notes: r.notes != null ? String(r.notes) : '',
     updatedAt: new Date().toISOString()
   };
@@ -533,8 +552,7 @@ export function initAnalytics(mount) {
     btnKpiAnnual: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnKpiAnnual')),
     inY: /** @type {HTMLInputElement | null} */ (mount.querySelector('#sp-an-inY')),
     inM: /** @type {HTMLSelectElement | null} */ (mount.querySelector('#sp-an-inM')),
-    inScope: /** @type {HTMLSelectElement | null} */ (mount.querySelector('#sp-an-inScope')),
-    inKey: /** @type {HTMLInputElement | null} */ (mount.querySelector('#sp-an-inKey')),
+    inGoalTarget: /** @type {HTMLSelectElement | null} */ (mount.querySelector('#sp-an-inGoalTarget')),
     inAmt: /** @type {HTMLInputElement | null} */ (mount.querySelector('#sp-an-inAmt')),
     inCnt: /** @type {HTMLInputElement | null} */ (mount.querySelector('#sp-an-inCnt')),
     inNotes: /** @type {HTMLInputElement | null} */ (mount.querySelector('#sp-an-inNotes')),
@@ -747,6 +765,45 @@ export function initAnalytics(mount) {
     return String(row.goal_target != null ? row.goal_target : row.scopeKey != null ? row.scopeKey : '')
       .trim()
       .toLowerCase();
+  }
+
+  function normalizeLoadedGoalRow_(x) {
+    const gTarget = String(
+      x.goal_target != null
+        ? x.goal_target
+        : x.goalTarget != null
+          ? x.goalTarget
+          : x.scopeKey != null
+            ? x.scopeKey
+            : ''
+    )
+      .trim()
+      .toLowerCase();
+    const sk = gTarget || String(x.scopeKey != null ? x.scopeKey : x.scope_key != null ? x.scope_key : '').trim().toLowerCase();
+    return {
+      year: x.year,
+      month: x.month,
+      goal_target: gTarget,
+      scope: 'category',
+      scopeKey: sk,
+      targetAmount:
+        x.targetAmount != null
+          ? x.targetAmount
+          : x.target_amount != null
+            ? x.target_amount
+            : x.sales_target != null
+              ? x.sales_target
+              : x.salesTarget,
+      targetCount:
+        x.targetCount != null
+          ? x.targetCount
+          : x.target_count != null
+            ? x.target_count
+            : x.people_target != null
+              ? x.people_target
+              : x.peopleTarget,
+      notes: x.notes != null ? String(x.notes) : ''
+    };
   }
 
   /**
@@ -1068,7 +1125,7 @@ export function initAnalytics(mount) {
     el.vizScope.innerHTML = '';
     const o0 = document.createElement('option');
     o0.value = 'entire';
-    o0.textContent = '전체(사이트) — 대분류 행';
+    o0.textContent = '전체(사이트) — 상품군별';
     el.vizScope.appendChild(o0);
     for (let si = 0; si < order.length; si++) {
       const ck = String(order[si]);
@@ -1078,7 +1135,7 @@ export function initAnalytics(mount) {
       const op = document.createElement('option');
       op.value = ck;
       const lab0 = AN_CATEGORY_KEY_LABEL[ck] != null ? AN_CATEGORY_KEY_LABEL[ck] : ck;
-      op.textContent = lab0 + ' (상품 행)';
+      op.textContent = lab0 + ' (상품별)';
       el.vizScope.appendChild(op);
     }
     if (Array.prototype.some.call(el.vizScope.options, function (o) { return o.value === prev; })) {
@@ -1111,7 +1168,7 @@ export function initAnalytics(mount) {
       if (Math.floor(Number(row.month)) !== m || Math.floor(Number(row.year)) !== y) {
         continue;
       }
-      const g = String(row.goal_target != null ? row.goal_target : row.scopeKey != null ? row.scopeKey : '').trim();
+      const g = goalKeyEntire_(row);
       if (g === goalKey) {
         tgt = row;
         break;
@@ -1145,7 +1202,7 @@ export function initAnalytics(mount) {
     const pAvail = report && report.previousYearDataAvailable === true;
     const pctG =
       gSales != null && isFinite(gSales) && gSales > 0
-        ? ' · 달성률(순/목표) ' + ((actualNet / gSales) * 100).toFixed(1) + '%'
+        ? ' · 목표 대비 달성률 ' + ((actualNet / gSales) * 100).toFixed(1) + '%'
         : '';
     const tgtLine =
       '<strong>이 범위 목표</strong> 매출 ' +
@@ -1157,7 +1214,7 @@ export function initAnalytics(mount) {
     if (pAvail && isFinite(prevNet)) {
       prevPart = ' · <strong>전년 동월(순)</strong> ' + fmtKrw_(prevNet);
       if (prevNet !== 0 && isFinite(actualNet)) {
-        prevPart += ' (전년比 ' + (((actualNet - prevNet) / Math.abs(prevNet)) * 100).toFixed(1) + '%)';
+        prevPart += ' (작년 같은 달 대비 ' + (((actualNet - prevNet) / Math.abs(prevNet)) * 100).toFixed(1) + '%)';
       }
     } else {
       prevPart = ' · 전년 동월 데이터 없음';
@@ -1209,10 +1266,10 @@ export function initAnalytics(mount) {
       return vizYmdExcludedFromYearGrid_(ymd0, todayYmdViz, _boundsMinYmd);
     });
     const sumHead = mIsYear ? '연 합(순)' : '월 합(순)';
-    const mtdLabel = mIsYear ? '연 누적(순, YTD)' : '월 누적(순, MTD)';
+    const mtdLabel = mIsYear ? '연 누적(순)' : '이달 누적(순)';
     const mtdTitle = mIsYear
-      ? '연 순매출 합계(순) — 연 누적(말일)과 동일'
-      : '월 순매출 합계(순) — 월 누적(말일)과 동일';
+      ? '이 해 순매출 누적 합계(말일 기준과 같음)'
+      : '이 달 순매출 누적 합계(말일 기준과 같음)';
 
     const scp0 = (el.vizScope && el.vizScope.value) || 'entire';
     const names = (report && report.prodNameByNo) || {};
@@ -1591,7 +1648,7 @@ export function initAnalytics(mount) {
     const skipBusy = skipBusyOverlay === true;
     if (!skipBusy) {
       showAnBusyOverlay_(
-        '불러오는 중',
+        '표 준비 중',
         '구매 건수 표와 연도별 합계를 불러옵니다. 잠시만 기다려 주세요.'
       );
     }
@@ -1811,7 +1868,7 @@ export function initAnalytics(mount) {
           const baseCls = 'sp-an-viz__sum-col sp-an-people__col--cat sp-an-people__col--c' + cmod2;
           if (!catR.length || ccol !== catR) {
             tdG +=
-              '<td class="' + baseCls + ' sp-an-people__row-cat-na" title="해당 상품 카테고리 아님">—</td>';
+              '<td class="' + baseCls + ' sp-an-people__row-cat-na" title="이 칸은 다른 상품군용입니다">—</td>';
           } else if (ri > 0 && String(rowItems[ri - 1].catRow || '').trim() === ccol) {
             /* 앞 행과 같은 카테고리 연속 → rowspan으로 이미 출력됨 */
           } else {
@@ -1826,7 +1883,7 @@ export function initAnalytics(mount) {
               baseCls +
               ' sp-an-people__cat-merge" rowspan="' +
               runLen +
-              '" title="같은 카테고리(연속 행) 이 달 구매 합(건)">' +
+              '" title="같은 상품군(연속 행) 이 달 구매 합(건)">' +
               fmtInt_(runSum) +
               '</td>';
           }
@@ -1863,7 +1920,7 @@ export function initAnalytics(mount) {
         sumB +=
           '<td class="sp-an-viz__sum-col sp-an-people__col--cat sp-an-people__col--c' +
           cmod3 +
-          ' sp-an-people__row-cat-na" title="카테고리 합계는 위 표에서 같은 카테고리 병합 셀">' +
+          ' sp-an-people__row-cat-na" title="상품군 합계는 위 표의 같은 상품군 합쳐진 칸을 보세요">' +
           '—' +
           '</td>';
       }
@@ -1875,7 +1932,7 @@ export function initAnalytics(mount) {
       await loadPeopleYearMatrix_(base, useY);
     } catch (e) {
       if (el.peopleWarn) {
-        el.peopleWarn.textContent = '구매 건수 표를 그리지 못했습니다.';
+        el.peopleWarn.textContent = '구매 건수 표를 불러오지 못했습니다.';
         el.peopleWarn.removeAttribute('hidden');
       }
     } finally {
@@ -1935,11 +1992,11 @@ export function initAnalytics(mount) {
             ? ym.y +
               '년 ' +
               anFilterMonthLabel_(0) +
-              ' · 순매출(매출−환불). 열은 해당 연도 1~12월 일자. 행은 대분류 또는 상품. 환불은 일별 − 합산.'
+              ' · 실제 매출에서 환불을 뺀 순매출입니다. 가로는 그 해 날짜, 세로는 상품군 또는 개별 상품입니다. 환불은 날짜별로 빼서 합칩니다.'
             : ym.y +
               '년 ' +
               anFilterMonthLabel_(ym.m) +
-              ' · 순매출(매출−환불). 행은 대분류 또는 상품, 열은 일자입니다. 환불은 일별로 − 합산.';
+              ' · 실제 매출에서 환불을 뺀 순매출입니다. 세로는 상품군 또는 개별 상품, 가로는 날짜입니다. 환불은 날짜별로 빼서 합칩니다.';
       }
       if (el.vizWarn) {
         el.vizWarn.setAttribute('hidden', '');
@@ -1952,7 +2009,7 @@ export function initAnalytics(mount) {
     const base = String(GAS_BASE_URL).trim();
     showAnBusyOverlay_(
       '불러오는 중',
-      '매출·구매 건수 데이터를 불러옵니다. 완료될 때까지 화면이 잠시 멈춘 것처럼 보일 수 있습니다.'
+      '매출과 구매 건수를 가져옵니다. 잠시만 기다려 주세요.'
     );
     try {
       const r = await gasJsonpWithParams(
@@ -1973,7 +2030,7 @@ export function initAnalytics(mount) {
             el.vizPeriodMeta.textContent = '';
           }
           if (el.vizWarn) {
-            const msg = formatHintWithErrorCode_(r) || '리포트를 가져오지 못했습니다.';
+            const msg = formatHintWithErrorCode_(r) || '매출 표를 불러오지 못했습니다.';
             el.vizWarn.textContent = msg;
             el.vizWarn.removeAttribute('hidden');
           }
@@ -2011,7 +2068,7 @@ export function initAnalytics(mount) {
           el.vizPeriodMeta.textContent = '';
         }
         if (el.vizWarn) {
-          el.vizWarn.textContent = '리포트 요청이 끝나지 않았습니다.';
+          el.vizWarn.textContent = '매출 표 요청이 끝나지 않았습니다. 잠시 뒤 다시 시도해 주세요.';
           el.vizWarn.removeAttribute('hidden');
         }
       }
@@ -2034,17 +2091,13 @@ export function initAnalytics(mount) {
       appended += 1;
       const r = localRows[i];
       const tr = document.createElement('tr');
-      const sc = String(r.scope);
-      const sk = String(r.scopeKey);
       tr.innerHTML =
         '<td>' +
         esc(r.year) +
         '</td><td>' +
         esc(anKpiMonthCellLabel_(r.month)) +
         '</td><td>' +
-        esc(SCOPE_LABEL[sc] || sc) +
-        '</td><td>' +
-        esc(displayScopeValueForTable_(sc, sk)) +
+        esc(kpiGoalTargetLabel_(goalKeyEntire_(r))) +
         '</td><td class="sp-an-table__em-sales">' +
         esc(r.targetAmount) +
         '</td><td class="sp-an-table__em-count">' +
@@ -2060,7 +2113,7 @@ export function initAnalytics(mount) {
       const trE = document.createElement('tr');
       trE.className = 'sp-an-table__empty-row';
       const tdE = document.createElement('td');
-      tdE.colSpan = 8;
+      tdE.colSpan = 7;
       tdE.className = 'sp-an-table__empty';
       if (localRows.length === 0) {
         tdE.textContent =
@@ -2207,26 +2260,7 @@ export function initAnalytics(mount) {
       }
       const dr = (r.data && r.data.rows) || [];
       localRows = dr.map(function (x) {
-        const gTarget = String(
-          x.goal_target != null
-            ? x.goal_target
-            : x.goalTarget != null
-              ? x.goalTarget
-              : x.scopeKey != null
-                ? x.scopeKey
-                : ''
-        ).trim();
-        const sk = gTarget || String(x.scopeKey != null ? x.scopeKey : x.scope_key != null ? x.scope_key : '').trim();
-        return {
-          year: x.year,
-          month: x.month,
-          goal_target: gTarget,
-          scope: String(x.scope).trim() || 'category',
-          scopeKey: sk,
-          targetAmount: x.targetAmount != null ? x.targetAmount : x.target_amount,
-          targetCount: x.targetCount != null ? x.targetCount : x.target_count,
-          notes: x.notes != null ? String(x.notes) : ''
-        };
+        return normalizeLoadedGoalRow_(x);
       });
       rebuildFilterYearMonth_();
       render();
@@ -2272,13 +2306,14 @@ export function initAnalytics(mount) {
   }
 
   function validateRowInForm() {
-    if (!el.inY || !el.inM || !el.inScope || !el.inKey || !el.inAmt || !el.inCnt) {
+    if (!el.inY || !el.inM || !el.inGoalTarget || !el.inAmt || !el.inCnt) {
       return { ok: false, msg: '입력란을 확인합니다.' };
     }
     const y = Math.floor(Number(el.inY.value));
     const mo = Math.floor(Number(el.inM.value));
-    const sc = el.inScope.value;
-    const sk = el.inKey.value.trim();
+    const gt = String(el.inGoalTarget.value || '')
+      .trim()
+      .toLowerCase();
     const ta = Number(el.inAmt.value);
     const tc = Number(el.inCnt.value);
     if (y < 2000 || y > 2100 || isNaN(y)) {
@@ -2287,11 +2322,8 @@ export function initAnalytics(mount) {
     if (mo < 0 || mo > 12) {
       return { ok: false, msg: '월은 연간 또는 1–12월입니다.' };
     }
-    if (sc !== 'category' && sc !== 'product') {
-      return { ok: false, msg: '범위를 고릅니다.' };
-    }
-    if (!sk.length) {
-      return { ok: false, msg: '키(대분류 키 또는 상품 번호)를 넣습니다.' };
+    if (!KPI_GOAL_TARGET_SET[gt]) {
+      return { ok: false, msg: '목표 구분(전체·솔패스·챌린지·솔루틴)을 고릅니다.' };
     }
     if (!isFinite(ta) || ta < 0) {
       return { ok: false, msg: '매출(원)은 0 이상의 숫자입니다.' };
@@ -2299,13 +2331,26 @@ export function initAnalytics(mount) {
     if (!isFinite(tc) || tc < 0) {
       return { ok: false, msg: '건수는 0 이상의 숫자입니다.' };
     }
+    for (let j = 0; j < localRows.length; j++) {
+      const ex = localRows[j];
+      if (Math.floor(Number(ex.year)) !== y || Math.floor(Number(ex.month)) !== mo) {
+        continue;
+      }
+      if (goalKeyEntire_(ex) === gt) {
+        return {
+          ok: false,
+          msg: '같은 연·월·목표 구분이 이미 있습니다. 표에서 삭제한 뒤 다시 넣어 주세요.'
+        };
+      }
+    }
     return {
       ok: true,
       row: {
         year: y,
         month: mo,
-        scope: sc,
-        scopeKey: sc === 'product' ? String(parseInt(sk, 10) || sk) : sk,
+        goal_target: gt,
+        scope: 'category',
+        scopeKey: gt,
         targetAmount: ta,
         targetCount: tc,
         notes: el.inNotes && el.inNotes.value ? el.inNotes.value.trim() : ''
@@ -2370,7 +2415,7 @@ export function initAnalytics(mount) {
         ready = true;
         syncAnUi_();
         await loadTargets();
-        setHint('드라이브에 목표 표가 준비됐습니다. 위 실적은 연동된 주문·동기화 기준이고, 아래는 팀에서 정한 목표만 적습니다.', true);
+        setHint('드라이브에 목표 표가 준비됐습니다. 위 실적은 솔루션편입(아임웹) 연동·동기화 기준이고, 아래는 팀에서 정한 목표만 적습니다.', true);
         window.requestAnimationFrame(function () {
           if (el.actuals) {
             el.actuals.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2541,7 +2586,7 @@ export function initAnalytics(mount) {
   }
 
   if (GAS_MODE.useMock) {
-    setHint('이 화면은 GAS Web App URL이 있을 때만 씁니다.', true);
+    setHint('연동 주소가 없어 미리보기만 됩니다. 실제 사용 전 담당자에게 연결을 요청하세요.', true);
   }
 
   syncAnUi_();

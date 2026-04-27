@@ -60,28 +60,24 @@ function stampCdnBuild_() {
   const m = getMount();
   if (!full) {
     if (el) {
-      el.textContent = '빌드 —';
-      el.setAttribute('title', 'import.meta / 스니펫에서 커밋을 못 읽음(로컬 file 서버 등)');
+      el.textContent = '버전 —';
+      el.setAttribute('title', '로컬에서 열었거나 표시 정보를 읽지 못한 경우 비어 있을 수 있습니다.');
       el.removeAttribute('hidden');
     }
     return;
   }
   const short = full.length >= 7 ? full.slice(0, 7) : full;
   if (el) {
-    el.textContent = '빌드 ' + short;
-    let tip = '실제 로드(이 모듈): jsDelivr @' + full;
+    el.textContent = '버전 ' + short;
+    let tip = '이 화면이 어느 배포본인지 확인할 때 쓰는 짧은 표시입니다.';
     if (fromModule) {
-      tip = 'jsDelivr @' + full + ' (import.meta.url)';
+      tip = '지금 브라우저가 불러온 파일 기준 표시입니다.';
     } else if (fromSnippet) {
-      tip = '스니펫 cdnCommit @' + full + ' (로드 URL에 토큰 없음)';
+      tip = '임웹에 넣은 스니펫 기준 표시입니다.';
     }
     if (mismatch) {
       tip =
-        '불일치: 실제 ' +
-        fromModule +
-        ' / 스니펫 ' +
-        fromSnippet +
-        ' — 임웹·스니펫·GitHub 커밋을 맞출 것';
+        '붙여 넣은 스니펫과 실제로 불러온 파일이 다를 수 있습니다. 담당자에게 맞춤을 요청하세요.';
     }
     el.setAttribute('title', tip);
     el.removeAttribute('hidden');
@@ -422,7 +418,7 @@ async function postSyncOpenFull() {
   refreshSyncButtonState();
   hideSheetsButton();
   setLoading(true);
-  setStatus('연동 데이터를 읽어 구글 드라이브(연동)에 반영하는 중입니다. 완료까지 수 분이 걸릴 수 있습니다.');
+  setStatus('솔루션편입(아임웹) 연동 데이터를 읽어 팀 구글 드라이브에 반영하는 중입니다. 완료까지 수 분 걸릴 수 있습니다.');
   setHint('');
   setChip('처리', 'soft');
 
@@ -433,9 +429,9 @@ async function postSyncOpenFull() {
       const err = j.error != null ? String(j.error) : 'ERROR';
       const msg = j.message != null ? String(j.message) : '';
       if (err === 'SYNC_FAILED') {
-        setStatus('처리가 완료되지 않았습니다. ' + (msg || '드라이브에 남는 내용을 확인한 뒤 운영 절차에 따릅니다.'));
+        setStatus('처리가 끝나지 않았습니다. ' + (msg || '드라이브에 남은 내용을 확인한 뒤 담당자에게 알려 주세요.'));
       } else {
-        setStatus('처리를 마치지 못했습니다. ' + (msg || '동일 증상이면 운영 절차에 따라 문의합니다.'));
+        setStatus('처리를 마치지 못했습니다. ' + (msg || '같은 증상이면 담당자에게 문의해 주세요.'));
       }
       setHint('');
       return;
@@ -453,9 +449,9 @@ async function postSyncOpenFull() {
         (p && p.rows != null ? p.rows : '—') +
         ' · 주문 ' +
         (o && o.orderRows != null ? o.orderRows : '—') +
-        ' · 품목 ' +
+        ' · 주문 품목 ' +
         (o && o.itemRows != null ? o.itemRows : '—') +
-        '. [드라이브에서 보기]로 확인합니다.'
+        '. 아래 「드라이브에서 보기」로 파일을 열어 확인하세요.'
     );
     const sheetUrl = d.spreadsheetUrl != null ? String(d.spreadsheetUrl).trim() : '';
     if (sheetUrl) {
@@ -464,11 +460,11 @@ async function postSyncOpenFull() {
       setHint('');
     } else {
       hideSheetsButton();
-      setHint('연동 쪽 구글 드라이브로 가는 주소를 받지 못했습니다. 내부 담당자에게 문의하세요.');
+      setHint('구글 드라이브 주소를 받지 못했습니다. 담당자에게 문의해 주세요.');
     }
   } catch (e) {
     setChip('오류', 'err');
-    setStatus('요청이 완료되지 않았습니다. 네트워크·접속 환경을 확인한 뒤 [실행]을 다시 누릅니다.');
+    setStatus('요청이 완료되지 않았습니다. 인터넷 연결을 확인한 뒤 「실행」을 다시 눌러 주세요.');
     setHint('');
   } finally {
     syncBusy = false;
@@ -495,14 +491,14 @@ function wireSync() {
     }
     if (actionNote) {
       actionNote.textContent =
-        '상단 배지가 [연결됨]이 아니면 이 화면을 쓸 수 없습니다. 내부 담당자에게 문의하세요.';
+        '상단이 「연결됨」이 아니면 이 화면을 쓸 수 없습니다. 담당자에게 문의해 주세요.';
     }
     return;
   }
   refreshSyncButtonState();
   if (actionNote) {
     actionNote.textContent =
-      '[실행]을 누를 때마다, 지금 시점의 솔루션 연동 데이터로 이 탭이 쓰는 구글 드라이브 파일을 통째로 갱신합니다. 수 분 걸릴 수 있습니다.';
+      '「실행」을 누를 때마다, 지금 시점의 솔루션편입(아임웹) 데이터로 이 탭에서 쓰는 구글 드라이브 파일을 통째로 다시 맞춥니다. 수 분 걸릴 수 있습니다.';
   }
   btnSync.addEventListener('click', function onSync() {
     postSyncOpenFull();
@@ -520,8 +516,8 @@ async function main() {
   hideSheetsButton();
   setSyncAggregateHeadLink('');
   if (GAS_MODE.useMock) {
-    setChip('미연결', 'soft');
-    setStatus('서버와 연결되지 않았습니다. 내부 담당자에게 문의하세요.');
+    setChip('연결 안 됨', 'soft');
+    setStatus('연결 프로그램과 연결되지 않았습니다. 담당자에게 문의해 주세요.');
     setHint('');
     wireSync();
     return;
@@ -551,5 +547,5 @@ async function main() {
 
 main().catch((e) => {
   setChip('오류', 'err');
-  setStatus('화면을 불러오지 못했습니다. 페이지를 새로 고침한 뒤 다시 시도합니다.');
+  setStatus('화면을 불러오지 못했습니다. 페이지를 새로 고침한 뒤 다시 시도해 주세요.');
 });

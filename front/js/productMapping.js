@@ -678,7 +678,7 @@ export function initProductMapping(mount) {
 
   async function loadState() {
     if (!GAS_MODE.canSync) {
-      setHint('상단 배지가 미연결이면 서버와 연결되지 않은 상태입니다. 내부 담당자에게 문의하세요.', true);
+      setHint('상단이 「연결 안 됨」이면 이 화면을 쓸 수 없습니다. 담당자에게 문의해 주세요.', true);
       updateExternalLinks({});
       return;
     }
@@ -791,7 +791,7 @@ export function initProductMapping(mount) {
         render();
       } catch (re) {
         const em = re && re.message != null ? String(re.message) : String(re);
-        setHint('목록 화면을 그리지 못했습니다. ' + em, true);
+        setHint('목록 화면을 표시하지 못했습니다. ' + em, true);
         syncFooterAndInstruct();
         return;
       }
@@ -860,7 +860,7 @@ export function initProductMapping(mount) {
         syncFooterAndInstruct();
       }
     } catch (_e) {
-      setHint('구글 쪽 파일을 만들지 못했습니다.', true);
+      setHint('구글 드라이브 파일을 만들지 못했습니다.', true);
       syncFooterAndInstruct();
     } finally {
       if (el.btnInit) {
@@ -918,7 +918,7 @@ export function initProductMapping(mount) {
     try {
       const r = await productMappingApplyBatched_(url, dirty, 5000);
       if (!r || !r.ok) {
-        setHint(errMsg(r) || '저장 실패', true);
+        setHint(errMsg(r) || '저장하지 못했습니다.', true);
         return;
       }
       await loadList({ fromApply: true });
@@ -978,9 +978,9 @@ export function initProductMapping(mount) {
       if (m === 'timeout') {
         t += '응답이 너무 오래 걸렸습니다. 잠시 뒤 다시 시도합니다.';
       } else if (m === 'script error') {
-        t += '서버 응답이 비정상입니다. 잠시 후 다시 시도하거나 내부 담당자에게 문의하세요.';
+        t += '연결 프로그램 응답이 비정상입니다. 잠시 후 다시 시도하거나 담당자에게 문의하세요.';
       } else {
-        t += m ? '(' + m + ')' : '네트워크 또는 스크립트 로딩을 확인합니다.';
+        t += m ? ' (' + m + ')' : ' 잠시 뒤 다시 시도해 주세요.';
       }
       setHint(t, true);
       syncFooterAndInstruct();

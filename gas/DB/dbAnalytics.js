@@ -597,6 +597,9 @@ function dbAnalyticsSheetsRepair_() {
  * @param {number} m
  * @return {boolean}
  */
+/** `01_연월_목표.goal_target` — 전체 + 일별 매출 표와 같은 네 상품군만 허용 */
+var _DB_ANALYTICS_GOAL_TARGETS_ALLOWED = ['entire', 'solpass', 'challenge', 'solutine'];
+
 function dbAnValidYearMonth_(y, m) {
   if (typeof y !== 'number' || !isFinite(y) || y < 2000 || y > 2100) {
     return false;
@@ -622,15 +625,31 @@ function dbAnValidateTargetRow_(r) {
   }
   var gt = String(
     r.goal_target != null ? r.goal_target : r.goalTarget != null ? r.goalTarget : ''
-  ).trim();
+  )
+    .trim()
+    .toLowerCase();
   if (!gt.length) {
     return false;
   }
-  if (gt !== 'entire' && _DB_PM_CATEGORIES.indexOf(gt) < 0) {
+  if (_DB_ANALYTICS_GOAL_TARGETS_ALLOWED.indexOf(gt) < 0) {
     return false;
   }
-  var sRaw = r.sales_target != null ? r.sales_target : r.salesTarget;
-  var pRaw = r.people_target != null ? r.people_target : r.peopleTarget;
+  var sRaw =
+    r.sales_target != null
+      ? r.sales_target
+      : r.salesTarget != null
+        ? r.salesTarget
+        : r.targetAmount != null
+          ? r.targetAmount
+          : r.target_amount;
+  var pRaw =
+    r.people_target != null
+      ? r.people_target
+      : r.peopleTarget != null
+        ? r.peopleTarget
+        : r.targetCount != null
+          ? r.targetCount
+          : r.target_count;
   if (sRaw !== null && sRaw !== undefined && String(sRaw).length) {
     var sa = Number(sRaw);
     if (!isFinite(sa) || sa < 0) {
@@ -672,7 +691,9 @@ function dbAnalyticsTargetsRead_() {
     rows.push({
       year: line[0],
       month: line[1],
-      goal_target: String(line[2] != null ? line[2] : '').trim(),
+      goal_target: String(line[2] != null ? line[2] : '')
+        .trim()
+        .toLowerCase(),
       sales_target: line[3],
       people_target: line[4]
     });
@@ -698,7 +719,10 @@ function dbAnalyticsTargetsApply_(rows) {
         ok: false,
         error: {
           code: 'BAD_REQUEST',
-          message: '목표 행 오류: year·month·goal_target(`entire` 또는 대분류 키)·sales_target·people_target (행 ' + (i + 1) + ')'
+          message:
+            '목표 행 오류: year·month·goal_target(전체=entire, 솔패스·챌린지·솔루틴만)·매출·건수 (행 ' +
+            (i + 1) +
+            ')'
         }
       };
     }
@@ -722,8 +746,26 @@ function dbAnalyticsTargetsApply_(rows) {
     var r = rows[i];
     var y2 = Number(r.year);
     var mo2 = Number(r.month);
-    var gta = String(r.goal_target != null ? r.goal_target : r.goalTarget != null ? r.goalTarget : '').trim();
-    out.push([y2, mo2, gta, r.sales_target != null ? r.sales_target : r.salesTarget, r.people_target != null ? r.people_target : r.peopleTarget]);
+    var gta = String(r.goal_target != null ? r.goal_target : r.goalTarget != null ? r.goalTarget : '')
+      .trim()
+      .toLowerCase();
+    var sW =
+      r.sales_target != null
+        ? r.sales_target
+        : r.salesTarget != null
+          ? r.salesTarget
+          : r.targetAmount != null
+            ? r.targetAmount
+            : r.target_amount;
+    var pW =
+      r.people_target != null
+        ? r.people_target
+        : r.peopleTarget != null
+          ? r.peopleTarget
+          : r.targetCount != null
+            ? r.targetCount
+            : r.target_count;
+    out.push([y2, mo2, gta, sW, pW]);
   }
   dbSetValuesFromRow2_(sh, out, w);
   return { ok: true, data: { written: out.length } };
@@ -920,12 +962,12 @@ function dbAnAggregateOrdersForYm_(ss, y, m) {
   return { totalSales: totalSales, orderCount: orderCount, uniqueMemberCount: u };
 }
 
-/** 가상 fact·상단 실적 카드에서 빼는 대분류(미분류·교재·자소서) — `lifecycle test`·관리자/테스트 그룹은 02 재구축 시 제외 */
-var DB_AN_AGG_EXCLUDE_CATEGORY = { unmapped: true, textbook: true, jasoseo: true };
+/** 가상 fact·상단 실적 카드에서 빼는 대분류(미분류·자소서). 교재는 일별 순매출·구매 건수에 포함 — `lifecycle test`·관리자/테스트 그룹은 02 재구축 시 제외 */
+var DB_AN_AGG_EXCLUDE_CATEGORY = { unmapped: true, jasoseo: true };
 
 /**
  * `02_주문라인_실적` — `dbAnVirtualFactRowsFromOrderLines_`와 동일한 행 선별 후,
- * `DB_AN_AGG_EXCLUDE_CATEGORY` 대분류 줄 제외 후 순매출(매출−환불)·주문 건수(고유 order_no).
+ * `DB_AN_AGG_EXCLUDE_CATEGORY` 대분류 줄 제외 후 순매출(매출−환불)·주문 건수(고유 order_no). (교재 포함)
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ssA 집계 스프레드시트
  * @param {number} y
  * @param {number} m 0 = 해당 연도 1–12월 전부, 1–12 = 해당 월만

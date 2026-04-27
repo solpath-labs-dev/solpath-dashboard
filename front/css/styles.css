@@ -1074,7 +1074,7 @@ a.sp-an-head__cta.sp-sync-head__link:hover {
 
 .sp-an-add__row--inline {
   display: grid;
-  grid-template-columns: minmax(4.2rem, 0.8fr) minmax(4.6rem, 0.9fr) minmax(5.8rem, 1fr) minmax(11rem, 1.8fr) minmax(6.8rem, 1fr) minmax(5.8rem, 0.9fr) minmax(10rem, 1.6fr);
+  grid-template-columns: minmax(4.2rem, 0.8fr) minmax(4.6rem, 0.9fr) minmax(7rem, 1.1fr) minmax(6.8rem, 1fr) minmax(5.8rem, 0.9fr) minmax(10rem, 1.6fr);
   align-items: end;
   gap: 0.5rem 0.55rem;
   margin-bottom: 0.55rem;

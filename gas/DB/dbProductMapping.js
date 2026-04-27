@@ -391,10 +391,7 @@ function dbProductMappingList_() {
     var lifecycle = m && m.lifecycle ? m.lifecycle : 'active';
     var product_name = m && m.product_name && String(m.product_name).length ? m.product_name : fromProductsName;
     var notes = m && m.notes != null ? String(m.notes) : '';
-    var sales_end = m && m.sales_end != null ? String(m.sales_end).trim() : '';
-    if (sales_end.length > 10) {
-      sales_end = sales_end.slice(0, 10);
-    }
+    var sales_end = m ? dbPmNormalizeSalesEndCell_(m.sales_end) : '';
     var created_at = m && m.created_at != null ? String(m.created_at) : '';
     var updated_at = m && m.updated_at != null ? String(m.updated_at) : '';
     var addYmd = dbAnAnyToSeoulYmd_(line[idxAddTime] != null ? line[idxAddTime] : '');
@@ -461,10 +458,7 @@ function dbPmReadMappingMap_() {
     if (!pk) {
       continue;
     }
-    var se = String(line[7] != null ? line[7] : '').trim();
-    if (se.length > 10) {
-      se = se.slice(0, 10);
-    }
+    var se = dbPmNormalizeSalesEndCell_(line[7]);
     var icCell = String(line[2] != null ? line[2] : '')
       .trim()
       .toLowerCase();

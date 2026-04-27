@@ -7,7 +7,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
           <span class="brand-mark" aria-hidden="true"></span>
           <div>
             <div class="brand__title">솔루션편입 대시보드</div>
-            <p class="sp-cdn-build" id="sp-cdnBuild" title="" hidden aria-label="프론트 jsDelivr 핀(임웹에 넣은 스니펫과 Network의 app.js @ 일치)"></p>
+            <p class="sp-cdn-build" id="sp-cdnBuild" title="" hidden aria-label="화면 버전 표시. 임웹 스니펫과 같은 배포인지 확인할 때 참고"></p>
           </div>
         </div>
         <div class="sp-intro-wrap">
@@ -16,7 +16,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
             <ul class="sp-intro-list">
               <li><strong>이 탭</strong>은 실제 <strong>매출(원) 목표</strong>와 <strong>인원(건수) 목표</strong>를 <strong>숫자로</strong> 모아 두는 곳입니다. <strong>꺾은선·막대 그래프는 없고</strong>, <strong>표(칸)</strong>로만 보고 고칩니다. (연동·상품분류·이 목표는 <strong>드라이브에 파일이 셋</strong>으로 갈립니다.)</li>
               <li><strong>드라이브에 저장</strong>을 누르면, 아래 표에 올라와 있는 <strong>목표 줄</strong>이 <strong>팀 구글 드라이브</strong>의 <strong>이 지표용 파일</strong>에 담깁니다. <strong>처음 한 번</strong>은 <strong>데이터 생성</strong>이 필요할 수 있고, <strong>생성이 안 될 때</strong>는 <strong>「데이터 동기화」</strong>를 한번 실행한 뒤에 다시 시도합니다.</li>
-              <li><strong>범위</strong>를 <strong>대분류</strong>로 두면 <strong>상품 항목 분류</strong>에 맞는 상품군(솔패스, 상품군 미정 등)에 맞게, <strong>상품</strong>이면 <strong>상품 번호</strong>를 넣습니다. 목표 입력에서 <strong>연간</strong>을 고르면 그 해 한 줄에 잡는 연간 목표로 둡니다.</li>
+              <li><strong>월별 목표 입력</strong>에서는 <strong>전체·솔패스·챌린지·솔루틴</strong> 중 하나만 고르고 매출·건수를 넣습니다(위 일별 매출 보기 범위와 같습니다). <strong>연간</strong>을 고르면 그 해 한 줄 목표로 넣습니다.</li>
               <li><strong>매출</strong> / <strong>건수(인원)</strong> 버튼은 <strong>같은 표</strong>에서 <strong>어느 칸을 굵게 볼지</strong>만 바꿉니다. 위 <strong>연도·월</strong>을 고르면 <strong>그에 맞는 목표 행</strong>만 남깁니다. <strong>연간 목표</strong>만 보려면 매출 블록의 <strong>연간 목표만</strong> 버튼을 켭니다.</li>
               <li><strong>전부 초기화</strong>는 여기에 쌓인 목표와 일부 자동 캐시를 비웁니다. 팀에 공지한 뒤에만 누릅니다.</li>
             </ul>
@@ -24,17 +24,17 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
           <div class="sp-intro-card sp-intro-card--sync" id="sp-introSync" hidden aria-hidden="true">
             <p class="sp-intro-title">데이터 동기화 · 사용 안내</p>
             <ul class="sp-intro-list">
-              <li>아임웹 <strong>솔루션 편입</strong>에 묶인 <strong>회원·상품·주문(품목)</strong>을 <strong>팀 구글 드라이브(연동·원본 쪽)</strong>에 맞춰 올리는 화면입니다. <strong>숫자·원천 목록</strong>은 <strong>이 탭</strong>이 쓰는 <strong>그 파일</strong>에 쌓이고, 위 <strong>구글 드라이브(연동)</strong>로 그 <strong>같은 곳</strong>을 엽니다. <strong>품목 분류</strong>는 <strong>「상품 항목 분류」</strong>·<strong>다른 파일</strong>입니다.</li>
+              <li>아임웹 <strong>솔루션 편입</strong>에 있는 <strong>회원·상품·주문(품목)</strong>을 <strong>팀 구글 드라이브</strong>에 맞춰 올리는 화면입니다. <strong>숫자와 목록</strong>은 <strong>이 탭</strong>에서 쓰는 <strong>연동 파일</strong>에 쌓이고, 위 <strong>구글 드라이브(연동)</strong>로 그 <strong>같은 파일</strong>을 엽니다. <strong>품목 분류</strong>는 <strong>「상품 항목 분류」</strong> 메뉴의 <strong>다른 파일</strong>입니다.</li>
               <li><strong>실행</strong>을 누를 때마다, 그때 맞춰 둔 아임웹 데이터가 <strong>그 드라이브 파일</strong>에 <strong>통째로</strong> 다시 올라갑니다. <strong>손으로 적어 둔 메모·수식</strong>은 <strong>덮어쓸 수 있으니</strong>, 꼭 남길 내용은 <strong>실행 전</strong>에 복사하거나 옮깁니다.</li>
               <li>잘못 누르는 실수를 줄이려고, 확인 칸에 <strong>「데이터 동기화」</strong>를 <strong>한 글자도 틀리지 않게</strong> 적은 뒤에만 <strong>실행</strong>됩니다.</li>
               <li>한 번에 <strong>수 분</strong> 걸릴 수 있습니다. 끝나면 안내·<strong>드라이브에서 보기</strong>로 건수를 보고, <strong>구글 드라이브</strong>에서 눈으로도 한 번 확인합니다.</li>
-              <li>상단 배지는 <strong>연결됨</strong>이면 정상입니다. <strong>미연결</strong>이면 <strong>내부 담당자에게</strong> 연락해 주세요.</li>
+              <li>상단 배지가 <strong>연결됨</strong>이면 정상입니다. <strong>연결 안 됨</strong>이면 <strong>담당자에게</strong> 연락해 주세요.</li>
             </ul>
           </div>
           <div class="sp-intro-card sp-intro-card--pm" id="sp-introPm" hidden>
             <p class="sp-intro-title">상품 항목 분류 · 사용 안내</p>
             <ul class="sp-intro-list">
-              <li>팀에서 정한 흐름으로, <strong>연동 수치·원천</strong>은 <strong>「데이터 동기화」</strong> 쪽 <strong>드라이브 파일</strong>에 쌓고, <strong>각 품목이 어느 강좌/상품군에 붙는지, 지금 어떻게 취급할지</strong>는 <strong>「상품 항목 분류」</strong>에 쓰는 <strong>드라이브</strong>에 적어 둡니다. 그 파일 맨 앞 <strong>「품목 분류」</strong> 시트에 저장합니다. 위 <strong>구글 드라이브(상품·분류)</strong>로 갑니다.</li>
+              <li>팀에서 정한 흐름으로, <strong>매출·주문 같은 수치</strong>는 <strong>「데이터 동기화」</strong> 쪽 <strong>드라이브 파일</strong>에 쌓고, <strong>각 품목이 어느 강좌/상품군에 붙는지, 지금 어떻게 취급할지</strong>는 <strong>「상품 항목 분류」</strong>에 쓰는 <strong>드라이브</strong>에 적어 둡니다. 그 파일 맨 앞 <strong>「품목 분류」</strong> 칸에 저장합니다. 위 <strong>구글 드라이브(상품·분류)</strong>로 갑니다.</li>
               <li><strong>상품군</strong>은 품목을 <strong>솔패스·솔루틴·챌린지·교재·자소서·아직 정하지 않음</strong> 중 어디로 묶어 볼지 정하는 <strong>큰 이름표</strong>입니다. <strong>매출·구매 건수</strong> 탭과 <strong>같은 기준</strong>으로 맞춥니다.</li>
               <li><strong>상태</strong>는 <strong>같은 품목도 운영·노출을 어떻게 볼지</strong>를 나눈 값입니다. <strong>진행</strong>은 지금 취급하는 판매 품목, <strong>만료</strong>는 <strong>상품은 판매 대상이지만(상품이 살아 있지만) 판매(노출) 기간이 끝난</strong> 경우, <strong>테스트</strong>는 시험·검수용, <strong>(구)상품</strong>은 <strong>판매를 완전히 끝냈거나, 대체 상품이 올라와 예전 품목으로만</strong> 보는 경우에 맞춥니다.</li>
               <li><strong>회원·주문 반영</strong>은 <strong>데이터 동기화</strong> 탭에서, <strong>이 탭</strong>에서는 품목 <strong>분류·상태</strong>만 손댑니다. 파일이 아직 없으면 <strong>상품 불러오기</strong>로 먼저 만듭니다.</li>
@@ -128,10 +128,10 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                 <p class="sp-an-pillar__lede">선택한 연·월 실적 요약과 <strong>목표 표</strong> 입력을 한 흐름으로 확인하고 저장합니다.</p>
               <div class="sp-an-salesUnified" id="sp-an-actuals" hidden>
                 <div class="sp-an-salesUnified__h" role="heading" aria-level="3">매출 · 선택 기간</div>
-                <p class="sp-an-salesUnified__lede" id="sp-an-actualsLede" aria-live="polite">위 <strong>연도·월</strong>에서 월을 <strong>전체</strong>로 두면 일별 순매출은 그 해 1~12월을 한 번에 봅니다. <strong>연간 목표만</strong> 보려면 옆 버튼을 켜서 아래 <strong>목표 표</strong>만 좁혀 봅니다. 맨 위 카드의 매출·주문은 <strong>지표용 시트</strong> 기준이며, <strong>상품군 미정·교재·자소서</strong>는 넣지 않습니다. <strong>시험용으로 둔 품목</strong>과 <strong>관리자·테스트 계정 주문</strong>도 집계에서 빼 둔 값입니다. 막대·(±%)는 <strong>전체(사이트) 목표</strong>가 있으면 그 목표, 없으면 <strong>전년 동월</strong> 대비입니다.</p>
+                <p class="sp-an-salesUnified__lede" id="sp-an-actualsLede" aria-live="polite">위 <strong>연도·월</strong>에서 월을 <strong>전체</strong>로 두면 일별 순매출은 그 해 1~12월을 한 번에 봅니다. <strong>연간 목표만</strong> 보려면 옆 버튼을 켜서 아래 <strong>목표 표</strong>만 좁혀 봅니다. 맨 위 카드의 매출·주문은 <strong>지표용 파일</strong> 기준이며, <strong>상품군 미정·자소서</strong>는 넣지 않습니다(교재 포함). <strong>시험용으로 둔 품목</strong>과 <strong>관리자·테스트 계정 주문</strong>은 화면 숫자에서 빼 둔 값입니다. 막대·(±%)는 <strong>전체(사이트) 목표</strong>가 있으면 그 목표, 없으면 <strong>전년 동월</strong> 대비입니다.</p>
                 <div class="sp-an-filters sp-an-filters--period" id="sp-an-filters">
                   <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">연도</span>
-                    <select class="sp-confirm" id="sp-an-filterY" title="실적·일별 표·목표(월별) 필터 연도"></select>
+                    <select class="sp-confirm" id="sp-an-filterY" title="실적 요약·일별 매출 표·목표 표에 쓰는 연도"></select>
                   </label>
                   <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">월</span>
                     <select class="sp-confirm" id="sp-an-filterM" title="월을 전체로 두면 해당 연도 1~12월 일별 순매출을 한 표에서 봅니다. 아래 목표 표에는 같은 해 월별 행이 함께 나옵니다.">
@@ -155,7 +155,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                 <div class="sp-an-actuals__cards sp-an-actuals__cards--tworow" id="sp-an-actualsCards" aria-label="선택 기간 실적·비교">
                   <div class="sp-an-metric-row">
                     <div class="sp-an-card sp-an-card--meter" id="sp-an-cardSales">
-                      <span class="sp-an-card__lbl">실제 매출(원)<span class="sp-an-card__lbl-note">(상품군 미정·교재·자소서 제외)</span></span>
+                      <span class="sp-an-card__lbl">실제 매출(원)<span class="sp-an-card__lbl-note">(상품군 미정·자소서 제외)</span></span>
                       <div class="sp-an-card__value-row">
                         <span class="sp-an-card__val" id="sp-an-valSales">—</span>
                         <span class="sp-an-card__pct" id="sp-an-pctSales"></span>
@@ -163,7 +163,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                       <div class="sp-an-meter" aria-hidden="true"><div class="sp-an-meter__fill" id="sp-an-meterSales"></div></div>
                     </div>
                     <div class="sp-an-card sp-an-card--meter" id="sp-an-cardOrders">
-                      <span class="sp-an-card__lbl">주문 건수<span class="sp-an-card__lbl-note">(상품군 미정·교재·자소서 제외)</span></span>
+                      <span class="sp-an-card__lbl">주문 건수<span class="sp-an-card__lbl-note">(상품군 미정·자소서 제외)</span></span>
                       <div class="sp-an-card__value-row">
                         <span class="sp-an-card__val" id="sp-an-valOrders">—</span>
                         <span class="sp-an-card__pct" id="sp-an-pctOrders"></span>
@@ -194,8 +194,8 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                     <div class="sp-an-viz__h4" id="sp-an-vizHeading" role="heading" aria-level="4"><span class="sp-an-viz__h4-main">일별 순매출</span> <span class="sp-an-viz__h4-meta" id="sp-an-vizPeriodMeta"></span></div>
                     <div class="sp-an-viz__toolbar" id="sp-an-vizToolbar">
                       <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">보기 범위</span>
-                        <select class="sp-confirm" id="sp-an-vizScope" title="전체(사이트) 합계는 모든 대분류 포함. 범위 좁히기: 솔패스·솔루틴·챌린지(상품 행)">
-                          <option value="entire">전체(사이트) — 대분류 행</option>
+                        <select class="sp-confirm" id="sp-an-vizScope" title="전체는 모든 상품군 합계. 범위를 좁히면 솔패스·솔루틴·챌린지 등 상품별로 볼 수 있습니다">
+                          <option value="entire">전체(사이트) — 상품군별</option>
                         </select>
                       </label>
                     </div>
@@ -208,9 +208,9 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
               </div>
               <div class="sp-pm__loading sp-an-loading" id="sp-an-loading" hidden role="status" aria-live="polite">데이터를 불러오는 중…</div>
               <div class="sp-pm-init" id="sp-an-init" hidden>
-                <p class="sp-pm-init__lede" id="sp-an-initLede">목표를 드라이브 표에 쓰려면 먼저 여기서 시트를 만듭니다. <strong>위 실적 요약</strong>은 동기화만 되어 있으면 됩니다. 예전 파일만 있을 때는 시트를 연 뒤 <strong>지표 시트·품목 목록 맞추기</strong>로 구조를 맞춥니다.</p>
+                <p class="sp-pm-init__lede" id="sp-an-initLede">목표를 드라이브 표에 쓰려면 먼저 여기서 <strong>지표용 파일</strong>을 만듭니다. <strong>위 실적 요약</strong>은 동기화만 되어 있으면 됩니다. 예전 파일만 있을 때는 파일을 연 뒤 <strong>지표 시트·품목 목록 맞추기</strong>로 구조를 맞춥니다.</p>
                 <div class="sp-confirm-row sp-pm-init__row">
-                  <button type="button" class="btn btn--primary" id="sp-an-btnInit">집계용 드라이브 시트 생성</button>
+                  <button type="button" class="btn btn--primary" id="sp-an-btnInit">지표용 드라이브 파일 만들기</button>
                 </div>
               </div>
               <div id="sp-an-body" hidden>
@@ -230,8 +230,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                         <tr>
                           <th>연</th>
                           <th>월</th>
-                          <th>범위</th>
-                          <th>대상</th>
+                          <th>목표 구분</th>
                           <th class="sp-an-table__em-sales">매출목표(원)</th>
                           <th class="sp-an-table__em-count">건수목표</th>
                           <th>비고</th>
@@ -249,15 +248,16 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                   <div class="sp-an-add__row sp-an-add__row--inline">
                     <label class="sp-an-add__field sp-an-add__field--y"><span class="sp-an-add__lbl">연</span> <input type="number" class="sp-confirm" id="sp-an-inY" min="2000" max="2100" step="1" /></label>
                     <label class="sp-an-add__field sp-an-add__field--m"><span class="sp-an-add__lbl">월</span>
-                      <select class="sp-confirm" id="sp-an-inM" title="0은 연간"></select>
+                      <select class="sp-confirm" id="sp-an-inM" title="0·연간을 고르면 그 해 한 줄 목표로 넣습니다"></select>
                     </label>
-                    <label class="sp-an-add__field sp-an-add__field--scope"><span class="sp-an-add__lbl">범위</span>
-                      <select class="sp-confirm" id="sp-an-inScope">
-                        <option value="category">대분류</option>
-                        <option value="product">상품</option>
+                    <label class="sp-an-add__field sp-an-add__field--goal"><span class="sp-an-add__lbl">목표 구분</span>
+                      <select class="sp-confirm" id="sp-an-inGoalTarget" title="일별 매출 표에서 고르는 범위와 동일: 전체·솔패스·챌린지·솔루틴">
+                        <option value="entire">전체</option>
+                        <option value="solpass">솔패스</option>
+                        <option value="challenge">챌린지</option>
+                        <option value="solutine">솔루틴</option>
                       </select>
                     </label>
-                    <label class="sp-an-add__field sp-an-add__field--key"><span class="sp-an-add__lbl">대상</span> <input type="text" class="sp-confirm" id="sp-an-inKey" placeholder="대분류 이름 또는 상품 번호" spellcheck="false" /></label>
                     <label class="sp-an-add__field sp-an-add__field--amt"><span class="sp-an-add__lbl">매출(원)</span> <input type="number" class="sp-confirm" id="sp-an-inAmt" min="0" step="1" /></label>
                     <label class="sp-an-add__field sp-an-add__field--cnt"><span class="sp-an-add__lbl">건수</span> <input type="number" class="sp-confirm" id="sp-an-inCnt" min="0" step="1" /></label>
                     <label class="sp-an-add__field sp-an-add__field--notes"><span class="sp-an-add__lbl">비고</span>
@@ -313,7 +313,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
           <div class="panel__head sp-sync-head">
             <div class="sp-panel-eyebrow" id="sp-panel-sync-h" role="heading" aria-level="2">데이터 동기화</div>
             <div class="sp-sync-head__right">
-              <span class="chip chip--soft" id="sp-envChip">미연결</span>
+              <span class="chip chip--soft" id="sp-envChip">연결 안 됨</span>
               <a
                 class="btn btn--secondary sp-sync-head__link"
                 id="sp-syncLinkAggregate"
@@ -404,7 +404,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
               </div>
               <div class="sp-pm__loading" id="sp-pm-listLoading" hidden role="status" aria-live="polite">데이터를 불러오는 중…</div>
               <div class="sp-pm-sections" id="sp-pm-sections" hidden></div>
-              <p class="actions-note sp-pm__footer-note" id="sp-pm-footerNote" hidden>편집한 뒤 <strong>수정하기</strong>로 <strong>구글 쪽</strong>에 반영합니다. 드롭다운을 바꾸면 <strong>수정하기</strong>가 켜집니다.</p>
+              <p class="actions-note sp-pm__footer-note" id="sp-pm-footerNote" hidden>편집한 뒤 <strong>수정하기</strong>로 <strong>구글 드라이브</strong>에 반영합니다. 드롭다운을 바꾸면 <strong>수정하기</strong>가 켜집니다.</p>
             </div>
           </div>
         </section>

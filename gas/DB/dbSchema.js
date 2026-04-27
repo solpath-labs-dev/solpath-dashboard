@@ -67,7 +67,7 @@ var DB_PRODUCT_MAPPING_HEADERS = [
  */
 var DB_PROP_SHEETS_ANALYTICS_ID = 'SHEETS_ANALYTICS_ID';
 
-/** 연·월 목표 — `goal_target` = `entire` 또는 internal 대분류 키 (빈칸으로 entire 금지) */
+/** 연·월 목표 — `goal_target` = `entire` | `solpass` | `challenge` | `solutine` (빈칸 금지) */
 var DB_SHEET_ANALYTICS_GOALS = '01_연월_목표';
 /** 마스터 `order_items` 1:1 + 실결제·스냅샷(종료일은 운영 product_mapping.sales_end) */
 var DB_SHEET_ANALYTICS_ORDER_LINES = '02_주문라인_실적';
