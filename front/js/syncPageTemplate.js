@@ -123,6 +123,9 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                 아래는 <strong>매출 현황</strong>과 <strong>구매 건수 현황</strong> 두 덩어리로 나뉩니다. 숫자는 모두 <strong>데이터 동기화</strong> 주문을 기준으로 하며, 목표·드라이브 저장은 매출 쪽에서만 씁니다.
               </p>
               <p class="sp-pm__hint" id="sp-an-hint" hidden></p>
+              <div class="sp-confirm-row">
+                <button type="button" class="btn btn--secondary" id="sp-an-btnExportBundleTop">통합 시트 저장</button>
+              </div>
               <div class="sp-an-pillar sp-an-pillar--sales" id="sp-an-pillarSales">
                 <div class="sp-an-pillar__title" role="heading" aria-level="2">매출 현황</div>
                 <p class="sp-an-pillar__lede">선택한 연·월 실적 요약과 <strong>목표 표</strong> 입력을 한 흐름으로 확인하고 저장합니다.</p>
@@ -193,7 +196,6 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                   <div class="sp-an-viz__subhead">
                     <div class="sp-an-viz__h4" id="sp-an-vizHeading" role="heading" aria-level="4"><span class="sp-an-viz__h4-main">일별 순매출</span> <span class="sp-an-viz__h4-meta" id="sp-an-vizPeriodMeta"></span></div>
                     <div class="sp-an-viz__toolbar" id="sp-an-vizToolbar">
-                    <button type="button" class="btn btn--secondary" id="sp-an-btnExportViz">이 표 시트로 저장</button>
                       <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">보기 범위</span>
                         <select class="sp-confirm" id="sp-an-vizScope" title="일별 순매출 격자와 맨 위 실적 카드(실제·목표)가 함께 따르는 범위입니다">
                           <option value="entire">전체(사이트) — 상품군별</option>
@@ -218,7 +220,6 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                 <div class="sp-an-kpi" id="sp-an-kpi">
                 <div class="sp-an-kpi__headblock" role="group" aria-label="실적 목표 표">
                   <div class="sp-an-kpi__headtitle" id="sp-an-kpiHeadTitle" role="heading" aria-level="3">실적 목표 표</div>
-                <div class="sp-an-kpi__headactions"><button type="button" class="btn btn--secondary" id="sp-an-btnExportKpi">이 표 시트로 저장</button></div>
                 <div class="sp-an-subtabs" role="tablist" aria-label="목표 표에서 강조할 칸">
                   <button type="button" class="sp-an-subtabs__btn is-active" id="sp-an-subSales" role="tab" aria-selected="true" aria-controls="sp-an-tableWrap" tabindex="0">매출</button>
                   <button type="button" class="sp-an-subtabs__btn" id="sp-an-subCount" role="tab" aria-selected="false" aria-controls="sp-an-tableWrap" tabindex="-1">건수</button>
@@ -282,8 +283,6 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                 <p class="sp-an-pillar__lede">선택한 달 기준으로, 날짜·상품별 <strong>구매 건수</strong>(주문에 담긴 품목 줄 수와 같습니다)를 봅니다.</p>
               <div class="sp-an-people" id="sp-an-people" hidden>
                 <div class="sp-an-people__toolbar" id="sp-an-peopleToolbar">
-                  <button type="button" class="btn btn--secondary" id="sp-an-btnExportPeopleDaily">일별 표 시트로 저장</button>
-                  <button type="button" class="btn btn--secondary" id="sp-an-btnExportPeopleYear">연도 합계 표 시트로 저장</button>
                   <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">연도</span>
                     <input type="number" class="sp-confirm" id="sp-an-peopleY" min="2000" max="2100" step="1" title="표에 쓸 연도" />
                   </label>

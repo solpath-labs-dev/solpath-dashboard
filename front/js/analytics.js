@@ -708,7 +708,6 @@ export function initAnalytics(mount) {
     subLede: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-subLede')),
     table: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-table')),
     tableWrap: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-tableWrap')),
-    btnExportKpi: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnExportKpi')),
     kpiBlock: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-kpi')),
     filterY: /** @type {HTMLSelectElement | null} */ (mount.querySelector('#sp-an-filterY')),
     filterM: /** @type {HTMLSelectElement | null} */ (mount.querySelector('#sp-an-filterM')),
@@ -727,7 +726,6 @@ export function initAnalytics(mount) {
     vizPeriodMeta: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-vizPeriodMeta')),
     vizScope: /** @type {HTMLSelectElement | null} */ (mount.querySelector('#sp-an-vizScope')),
     vizScopeStrip: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-vizScopeStrip')),
-    btnExportViz: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnExportViz')),
     vizScroll: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-vizScroll')),
     vizLede: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-vizLede')),
     vizWarn: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-vizWarn')),
@@ -738,8 +736,7 @@ export function initAnalytics(mount) {
     peopleWarn: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-peopleWarn')),
     peopleGrid: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-peopleGrid')),
     peopleMatrix: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-peopleMatrix')),
-    btnExportPeopleDaily: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnExportPeopleDaily')),
-    btnExportPeopleYear: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnExportPeopleYear')),
+    btnExportBundleTop: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnExportBundleTop')),
     anBusyOverlay: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-loadingOverlay')),
     anBusyTitle: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-loadingOverlay-title')),
     anBusyDesc: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-loadingOverlay-desc'))
@@ -770,6 +767,8 @@ export function initAnalytics(mount) {
   let _boundsMinYmd = null;
   /** 목표(KPI) 표만 연간 한 줄 행 필터 */
   let _kpiAnnualRows = false;
+  /** 연간 토글 ON 전에 보던 월(OFF 시 복귀용) */
+  let _kpiPrevMonthForToggle = null;
   /** 연·월 필터: 첫 `rebuildFilterYearMonth_`에서만 HTML 기본(1월) 대신 당월로 맞춤 */
   let _anPeriodFilterBootstrapped = false;
   /**
@@ -860,6 +859,78 @@ export function initAnalytics(mount) {
       );
     } catch (e) {
       setHint('시트 저장 요청이 끝나지 않았습니다. 잠시 뒤 다시 시도해 주세요.', true);
+    } finally {
+      hideAnBusyOverlay_();
+    }
+  }
+
+  /**
+   * 화면 요약+핵심 표를 한 파일(여러 시트)로 저장
+   */
+  async function exportAnalyticsBundleSheet_() {
+    const capViz = captureTableGridForExport_(el.vizScroll);
+    const capPeopleDaily = captureTableGridForExport_(el.peopleGrid);
+    const capPeopleYear = captureTableGridForExport_(el.peopleMatrix);
+    if (!capViz || !capViz.rows.length) {
+      setHint('일별 순매출 표가 아직 없습니다. 먼저 데이터를 불러와 주세요.', true);
+      return;
+    }
+    if (!capPeopleDaily || !capPeopleDaily.rows.length) {
+      setHint('구매 건수 표가 아직 없습니다. 먼저 데이터를 불러와 주세요.', true);
+      return;
+    }
+    const ym = getAnFilterYm_(el);
+    const scopeLabel =
+      el.vizScope && el.vizScope.options && el.vizScope.selectedIndex >= 0
+        ? String(el.vizScope.options[el.vizScope.selectedIndex].textContent || '').trim()
+        : 'entire';
+    const summaryRows = [
+      ['항목', '값'],
+      ['기준 연도', String(ym.y)],
+      ['기준 월', anFilterMonthLabel_(ym.m)],
+      ['보기 범위', scopeLabel],
+      ['실제 매출(원)', el.valSales ? String(el.valSales.textContent || '') : ''],
+      ['주문 건수', el.valOrders ? String(el.valOrders.textContent || '') : ''],
+      [el.actRow2LblA ? String(el.actRow2LblA.textContent || '') : '매출 목표(원)', el.actRow2ValA ? String(el.actRow2ValA.textContent || '') : ''],
+      [el.actRow2LblB ? String(el.actRow2LblB.textContent || '') : '주문 목표(건)', el.actRow2ValB ? String(el.actRow2ValB.textContent || '') : '']
+    ];
+    const payload = {
+      tableType: 'analytics_bundle',
+      title: '매출구매건수_' + ym.y + '년_' + anFilterMonthLabel_(ym.m),
+      summaryRows: summaryRows,
+      tables: [
+        { name: '일별순매출', rows: capViz.rows, merges: capViz.merges },
+        { name: '구매건수_일별', rows: capPeopleDaily.rows, merges: capPeopleDaily.merges },
+        {
+          name: '구매건수_연도월합계',
+          rows: capPeopleYear && capPeopleYear.rows ? capPeopleYear.rows : [],
+          merges: capPeopleYear && capPeopleYear.merges ? capPeopleYear.merges : []
+        }
+      ]
+    };
+    const encLen = encodeURIComponent(JSON.stringify(payload)).length;
+    if (encLen > 240000) {
+      setHint('표가 너무 커서 통합 저장이 어렵습니다. 월 범위를 좁혀 다시 시도해 주세요.', true);
+      return;
+    }
+    showAnBusyOverlay_('시트 저장 중', '요약·일별 순매출·구매 건수 표를 한 파일로 저장합니다.');
+    try {
+      const r = await gasJsonpWithParams(url, 'analyticsTableExport', { payload: JSON.stringify(payload) }, 120000);
+      if (!r || !r.ok) {
+        setHint(errMsg_(r) || '통합 시트 저장에 실패했습니다.', true);
+        return;
+      }
+      const d = (r.data && r.data) || {};
+      const sheetUrl = d.spreadsheetUrl != null ? String(d.spreadsheetUrl) : '';
+      const folderUrl = d.folderUrl != null ? String(d.folderUrl) : '';
+      setHint(
+        sheetUrl
+          ? '통합 시트를 만들었습니다. 파일: ' + sheetUrl + (folderUrl ? ' · 폴더: ' + folderUrl : '')
+          : '통합 시트를 만들었습니다.',
+        true
+      );
+    } catch (e) {
+      setHint('통합 시트 저장 요청이 끝나지 않았습니다. 잠시 뒤 다시 시도해 주세요.', true);
     } finally {
       hideAnBusyOverlay_();
     }
@@ -2705,62 +2776,32 @@ export function initAnalytics(mount) {
   if (el.filterM) {
     el.filterM.addEventListener('change', onAnPeriodChange_);
   }
-  if (el.btnExportKpi) {
-    el.btnExportKpi.addEventListener('click', function () {
-      const ym = getAnFilterYm_(el);
-      void exportTableToDriveSheet_(
-        'kpi_goals',
-        '실적목표_' + ym.y + '년',
-        el.table
-      );
-    });
-  }
-  if (el.btnExportViz) {
-    el.btnExportViz.addEventListener('click', function () {
-      const ym = getAnFilterYm_(el);
-      const sc = el.vizScope && el.vizScope.value ? String(el.vizScope.value) : 'entire';
-      void exportTableToDriveSheet_(
-        'viz_daily_sales',
-        '일별순매출_' + ym.y + '년_' + anFilterMonthLabel_(ym.m) + '_' + sc,
-        el.vizScroll
-      );
-    });
-  }
-  if (el.btnExportPeopleDaily) {
-    el.btnExportPeopleDaily.addEventListener('click', function () {
-      if (!el.peopleY || !el.peopleM) {
-        return;
-      }
-      const y = parseInt(String(el.peopleY.value || ''), 10);
-      const m = parseInt(String(el.peopleM.value || ''), 10);
-      void exportTableToDriveSheet_(
-        'people_daily_count',
-        '구매건수_일별_' + (isFinite(y) ? y : '') + '년_' + (isFinite(m) ? m + '월' : ''),
-        el.peopleGrid
-      );
-    });
-  }
-  if (el.btnExportPeopleYear) {
-    el.btnExportPeopleYear.addEventListener('click', function () {
-      if (!el.peopleY) {
-        return;
-      }
-      const y = parseInt(String(el.peopleY.value || ''), 10);
-      void exportTableToDriveSheet_(
-        'people_year_matrix',
-        '구매건수_연도월합계_' + (isFinite(y) ? y + '년' : ''),
-        el.peopleMatrix
-      );
+  if (el.btnExportBundleTop) {
+    el.btnExportBundleTop.addEventListener('click', function () {
+      void exportAnalyticsBundleSheet_();
     });
   }
   if (el.btnKpiAnnual) {
     el.btnKpiAnnual.addEventListener('click', function () {
-      _kpiAnnualRows = !_kpiAnnualRows;
+      const next = !_kpiAnnualRows;
+      if (el.filterM) {
+        if (next) {
+          const curM = parseInt(String(el.filterM.value || ''), 10);
+          if (isFinite(curM) && curM >= 1 && curM <= 12) {
+            _kpiPrevMonthForToggle = curM;
+          }
+          el.filterM.value = '0';
+        } else {
+          const restoreM = _kpiPrevMonthForToggle != null ? _kpiPrevMonthForToggle : new Date().getMonth() + 1;
+          el.filterM.value = String(restoreM >= 1 && restoreM <= 12 ? restoreM : 1);
+        }
+      }
+      _kpiAnnualRows = next;
       syncKpiAnnualBtn_();
       render();
       setHint(
         _kpiAnnualRows
-          ? '연간 모드: 표는 월 0(연간) 목표만, 맨 위 카드는 이 연도 합계 실적·연간 목표로 맞춥니다. 표로 스크롤합니다.'
+          ? '연간 모드: 월을 전체(연간)로 전환하고, 표는 월 0 목표·카드는 연도 합계 실적/목표로 맞춥니다.'
           : '월간 모드: 표는 이 연도 목표 전체, 카드는 위에서 고른 월(또는 전체) 실적입니다.',
         true
       );
@@ -2770,7 +2811,7 @@ export function initAnalytics(mount) {
           scrollEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       });
-      void loadMasterActuals_();
+      onAnPeriodChange_();
     });
   }
 
