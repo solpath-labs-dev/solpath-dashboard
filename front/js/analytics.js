@@ -808,12 +808,19 @@ export function initAnalytics(mount) {
   }
 
   /**
-   * 상단 카드 막대·둘째 줄: `entire` 한 줄이 있으면 그것만, 없으면 솔패스·챌린지·솔루틴 목표 합.
+   * 상단 카드 목표 기준 — 일별 순매출 「보기 범위」와 같은 키.
+   * - entire: `전체` 목표 한 줄 우선, 없으면 솔패스·챌린지·솔루틴 목표 합
+   * - solpass 등: 해당 목표 구분 한 줄만
    * @param {number} y
    * @param {number} m
-   * @return {{ kind: 'entire'|'sum'|'none', row?: object, sumSales: number|null, sumOrders: number|null }}
+   * @param {string} [vizScopeRaw] el.vizScope.value
+   * @return {{ kind: 'entire'|'sum'|'single'|'none', row?: object, sumSales: number|null, sumOrders: number|null }}
    */
-  function resolveCardTargetBaseline_(y, m) {
+  function resolveCardTargetBaseline_(y, m, vizScopeRaw) {
+    const sc =
+      String(vizScopeRaw != null && vizScopeRaw !== '' ? vizScopeRaw : 'entire')
+        .trim()
+        .toLowerCase() || 'entire';
     /** @type {object[]} */
     const rows = [];
     let i;
@@ -823,6 +830,21 @@ export function initAnalytics(mount) {
         continue;
       }
       rows.push(row);
+    }
+    if (sc !== 'entire' && VIZ_SCOPE_DROPDOWN_KEYS[sc]) {
+      let j;
+      for (j = 0; j < rows.length; j++) {
+        if (goalKeyEntire_(rows[j]) === sc) {
+          const one = rows[j];
+          return {
+            kind: 'single',
+            row: one,
+            sumSales: parseTargetNum_(one.targetAmount),
+            sumOrders: parseTargetNum_(one.targetCount)
+          };
+        }
+      }
+      return { kind: 'none', sumSales: null, sumOrders: null };
     }
     let entireRow = null;
     let j;
@@ -965,7 +987,8 @@ export function initAnalytics(mount) {
       d.prevYear && typeof d.prevYear === 'object' ? /** @type {Record<string, unknown>} */ (d.prevYear) : {};
     const actS = Number(d.actualSales);
     const actO = Number(d.orderCount);
-    const bl = resolveCardTargetBaseline_(yv, mv);
+    const cardScope = el.vizScope && el.vizScope.value ? String(el.vizScope.value).trim().toLowerCase() : 'entire';
+    const bl = resolveCardTargetBaseline_(yv, mv, cardScope);
     let baseS = NaN;
     let baseO = NaN;
     if (bl.kind !== 'none') {
@@ -1000,6 +1023,11 @@ export function initAnalytics(mount) {
       if (bl.kind === 'sum') {
         el.actRow2Sub.textContent =
           '「전체」목표 한 줄이 없을 때 — 솔패스·챌린지·솔루틴에 넣은 목표를 합산해 비교합니다.';
+        el.actRow2Sub.removeAttribute('hidden');
+      } else if (bl.kind === 'single') {
+        const labS = AN_CATEGORY_KEY_LABEL[cardScope] != null ? AN_CATEGORY_KEY_LABEL[cardScope] : cardScope;
+        el.actRow2Sub.textContent =
+          '위 일별 순매출 「보기 범위」(' + labS + ')와 같은 목표 구분 한 줄입니다.';
         el.actRow2Sub.removeAttribute('hidden');
       } else {
         el.actRow2Sub.textContent = '';
@@ -1138,7 +1166,7 @@ export function initAnalytics(mount) {
   }
 
   function rowPassesFilter(r) {
-    if (!el.filterY || !el.filterM) {
+    if (!el.filterY) {
       return true;
     }
     const yf = parseInt(String(el.filterY.value), 10);
@@ -1147,17 +1175,14 @@ export function initAnalytics(mount) {
     }
     const yr = Math.floor(Number(r.year));
     const mr = Math.floor(Number(r.month));
+    if (yr !== yf) {
+      return false;
+    }
     if (_kpiAnnualRows) {
-      return yr === yf && mr === 0;
+      return mr === 0;
     }
-    const mf = parseInt(String(el.filterM.value), 10);
-    if (!isFinite(mf)) {
-      return true;
-    }
-    if (mf === 0) {
-      return yr === yf && mr >= 1 && mr <= 12;
-    }
-    return yr === yf && mr === mf;
+    /* 월·일별 보기 범위와 무관 — 선택 연도에 넣은 목표는 표에 모두 둠 */
+    return true;
   }
 
   function esc(s) {
@@ -2014,6 +2039,7 @@ export function initAnalytics(mount) {
           _vizM
         );
       }
+      void loadMasterActuals_();
     });
   }
 
@@ -2134,10 +2160,26 @@ export function initAnalytics(mount) {
     }
     el.tbody.innerHTML = '';
     var appended = 0;
-    for (let i = 0; i < localRows.length; i++) {
-      if (!rowPassesFilter(localRows[i])) {
-        continue;
-      }
+    const rowsOrdered = localRows
+      .map(function (row, idx) {
+        return { row: row, idx: idx };
+      })
+      .filter(function (x) {
+        return rowPassesFilter(x.row);
+      })
+      .sort(function (a, b) {
+        const ma = Math.floor(Number(a.row.month));
+        const mb = Math.floor(Number(b.row.month));
+        const ka = ma === 0 ? -1 : ma;
+        const kb = mb === 0 ? -1 : mb;
+        if (ka !== kb) {
+          return ka - kb;
+        }
+        return goalKeyEntire_(a.row).localeCompare(goalKeyEntire_(b.row), 'en');
+      });
+    let ri;
+    for (ri = 0; ri < rowsOrdered.length; ri++) {
+      const i = rowsOrdered[ri].idx;
       appended += 1;
       const r = localRows[i];
       const tr = document.createElement('tr');
@@ -2173,7 +2215,7 @@ export function initAnalytics(mount) {
           '선택 연도에 연간 목표 행이 없습니다. 연간 목표를 넣었는지, 연도를 바꿔 보세요.';
       } else {
         tdE.textContent =
-          '지금 고른 연·월에 맞는 목표 행이 없습니다. 연도나 월을 바꿔 보세요.';
+          '선택 연도에 표시할 목표 행이 없습니다. 연도를 바꾸거나 목표를 추가해 보세요.';
       }
       trE.appendChild(tdE);
       el.tbody.appendChild(trE);
@@ -2256,10 +2298,14 @@ export function initAnalytics(mount) {
     _lastMasterActuals = null;
     paintActualsCompareUi_();
     try {
+      const scopeReq =
+        el.vizScope && el.vizScope.value && String(el.vizScope.value).trim().toLowerCase() !== 'entire'
+          ? String(el.vizScope.value).trim().toLowerCase()
+          : 'entire';
       const r = await gasJsonpWithParams(
         url,
         'analyticsMasterActualsGet',
-        { year: String(ym.y), month: String(mCard) },
+        { year: String(ym.y), month: String(mCard), scope: scopeReq },
         90000
       );
       if (!r || !r.ok) {

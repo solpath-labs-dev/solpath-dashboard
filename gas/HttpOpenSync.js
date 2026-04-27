@@ -208,7 +208,8 @@ function openSyncRouteAction_(action, e) {
     if (!isFinite(mAc) || mAc < 0 || mAc > 12) {
       mAc = nowAc.getMonth() + 1;
     }
-    return dbAnalyticsMasterActualsGet_(yAc, mAc);
+    var scopeAc = pAc.scope != null ? String(pAc.scope).trim().toLowerCase() : '';
+    return dbAnalyticsMasterActualsGet_(yAc, mAc, scopeAc);
   }
   if (action === 'analyticsFactRebuild') {
     var pFr = e.parameter || {};

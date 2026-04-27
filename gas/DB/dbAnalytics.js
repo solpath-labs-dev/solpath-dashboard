@@ -966,18 +966,36 @@ function dbAnAggregateOrdersForYm_(ss, y, m) {
 var DB_AN_AGG_EXCLUDE_CATEGORY = { unmapped: true };
 
 /**
+ * 상단 카드 `scope` — 빈 문자·entire = 사이트 전체, 그 외 solpass|challenge|solutine 만 해당 대분류 라인 집계
+ * @param {string} [scopeRaw]
+ * @return {string} '' | 'solpass' | 'challenge' | 'solutine'
+ */
+function dbAnNormalizeCardScope_(scopeRaw) {
+  var t = scopeRaw != null ? String(scopeRaw).trim().toLowerCase() : '';
+  if (!t || t === 'entire') {
+    return '';
+  }
+  if (t === 'solpass' || t === 'challenge' || t === 'solutine') {
+    return t;
+  }
+  return '';
+}
+
+/**
  * `02_주문라인_실적` — `dbAnVirtualFactRowsFromOrderLines_`와 동일한 행 선별 후,
  * `DB_AN_AGG_EXCLUDE_CATEGORY` 대분류 줄 제외 후 순매출(매출−환불)·주문 건수(고유 order_no). (교재·자소서 포함)
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ssA 집계 스프레드시트
  * @param {number} y
  * @param {number} m 0 = 해당 연도 1–12월 전부, 1–12 = 해당 월만
+ * @param {string} [scopeCat] 빈 값·entire = 전체, solpass|challenge|solutine 이면 해당 internal_category 만
  * @return {{ netSales: number, orderCount: number }}
  */
-function dbAnSalesCardsMetricsFrom02_(ssA, y, m) {
+function dbAnSalesCardsMetricsFrom02_(ssA, y, m, scopeCat) {
   var z = { netSales: 0, orderCount: 0 };
   if (!ssA || !isFinite(y) || !isFinite(m) || m < 0 || m > 12) {
     return z;
   }
+  var scF = dbAnNormalizeCardScope_(scopeCat);
   var sh = dbAnGetOrderLinesSheet_(ssA);
   var lr = sh.getLastRow();
   if (lr < 2) {
@@ -1034,6 +1052,9 @@ function dbAnSalesCardsMetricsFrom02_(ssA, y, m) {
     if (DB_AN_AGG_EXCLUDE_CATEGORY[cat2]) {
       continue;
     }
+    if (scF && cat2 !== scF) {
+      continue;
+    }
     var ymdP2 = ymd0.split('-');
     if (ymdP2.length < 2) {
       continue;
@@ -1078,9 +1099,10 @@ function dbAnSalesCardsMetricsFrom02_(ssA, y, m) {
  * m이 1–12면 해당 월·전년 동월, m이 0이면 해당 연도·전년도 각각 1–12월 합계.
  * @param {number} y
  * @param {number} m 0 = 연도 합계, 1–12 = 해당 월
+ * @param {string} [scope] entire|solpass|challenge|solutine — 일별 매출 보기 범위와 동일
  * @return {{ ok: true, data: Object }|{ ok: false, error: { code: string, message: string } }}
  */
-function dbAnalyticsMasterActualsGet_(y, m) {
+function dbAnalyticsMasterActualsGet_(y, m, scope) {
   if (typeof y !== 'number' || !isFinite(y) || y < 2000 || y > 2100) {
     return { ok: false, error: { code: 'BAD_REQUEST', message: 'year(2000–2100)이 필요합니다.' } };
   }
@@ -1103,15 +1125,17 @@ function dbAnalyticsMasterActualsGet_(y, m) {
       }
     };
   }
-  var cur = dbAnSalesCardsMetricsFrom02_(ssA, y, m);
+  var sc = dbAnNormalizeCardScope_(scope);
+  var cur = dbAnSalesCardsMetricsFrom02_(ssA, y, m, sc);
   var py = y - 1;
   var pm = m;
-  var prev = dbAnSalesCardsMetricsFrom02_(ssA, py, pm);
+  var prev = dbAnSalesCardsMetricsFrom02_(ssA, py, pm, sc);
   return {
     ok: true,
     data: {
       year: y,
       month: m,
+      scope: sc || 'entire',
       actualSales: cur.netSales,
       orderCount: cur.orderCount,
       uniqueMemberCount: 0,

@@ -17,7 +17,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
               <li><strong>이 탭</strong>은 실제 <strong>매출(원) 목표</strong>와 <strong>인원(건수) 목표</strong>를 <strong>숫자로</strong> 모아 두는 곳입니다. <strong>꺾은선·막대 그래프는 없고</strong>, <strong>표(칸)</strong>로만 보고 고칩니다. (연동·상품분류·이 목표는 <strong>드라이브에 파일이 셋</strong>으로 갈립니다.)</li>
               <li><strong>드라이브에 저장</strong>을 누르면, 아래 표에 올라와 있는 <strong>목표 줄</strong>이 <strong>팀 구글 드라이브</strong>의 <strong>이 지표용 파일</strong>에 담깁니다. <strong>처음 한 번</strong>은 <strong>데이터 생성</strong>이 필요할 수 있고, <strong>생성이 안 될 때</strong>는 <strong>「데이터 동기화」</strong>를 한번 실행한 뒤에 다시 시도합니다.</li>
               <li><strong>월별 목표 입력</strong>에서는 <strong>전체·솔패스·챌린지·솔루틴</strong> 중 하나만 고르고 매출·건수를 넣습니다(위 일별 매출 보기 범위와 같습니다). <strong>연간</strong>을 고르면 그 해 한 줄 목표로 넣습니다.</li>
-              <li><strong>매출</strong> / <strong>건수(인원)</strong> 버튼은 <strong>같은 표</strong>에서 <strong>어느 칸을 굵게 볼지</strong>만 바꿉니다. 위 <strong>연도·월</strong>을 고르면 <strong>그에 맞는 목표 행</strong>만 남깁니다. <strong>연간 목표</strong>만 보려면 매출 블록의 <strong>연간 목표만</strong> 버튼을 켭니다.</li>
+              <li><strong>매출</strong> / <strong>건수(인원)</strong> 버튼은 <strong>같은 표</strong>에서 <strong>어느 칸을 굵게 볼지</strong>만 바꿉니다. <strong>실적 목표 표</strong>는 위에서 고른 <strong>연도</strong>에 넣어 둔 목표를 <strong>월·목표 구분 상관없이 한꺼번에</strong> 보여 줍니다(일별 표의 <strong>보기 범위</strong>와 무관). <strong>연간 한 줄</strong>만 보려면 <strong>연간 목표만</strong>을 켭니다.</li>
               <li><strong>전부 초기화</strong>는 여기에 쌓인 목표와 일부 자동 캐시를 비웁니다. 팀에 공지한 뒤에만 누릅니다.</li>
             </ul>
           </div>
@@ -128,13 +128,13 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                 <p class="sp-an-pillar__lede">선택한 연·월 실적 요약과 <strong>목표 표</strong> 입력을 한 흐름으로 확인하고 저장합니다.</p>
               <div class="sp-an-salesUnified" id="sp-an-actuals" hidden>
                 <div class="sp-an-salesUnified__h" role="heading" aria-level="3">매출 · 선택 기간</div>
-                <p class="sp-an-salesUnified__lede" id="sp-an-actualsLede" aria-live="polite">위 <strong>연도·월</strong>에서 월을 <strong>전체</strong>로 두면 일별 순매출은 그 해 1~12월을 한 번에 봅니다. <strong>연간 목표만</strong>을 켜면 아래 <strong>목표 표</strong>가 연간 행만 보이게 필터되고, 표 위치로 스크롤됩니다. 맨 위 카드의 매출·주문은 <strong>지표용 파일</strong> 기준이며 <strong>상품군 미정</strong>만 빼고(교재·자소서 포함), <strong>시험용 품목</strong>·<strong>관리자·테스트 계정 주문</strong>도 빼 둔 값입니다. 막대·(±%)는 <strong>「전체」목표</strong>가 있으면 그 값, 없으면 <strong>솔패스·챌린지·솔루틴 목표 합</strong>, 그것도 없으면 <strong>전년 동월</strong> 대비입니다.</p>
+                <p class="sp-an-salesUnified__lede" id="sp-an-actualsLede" aria-live="polite">위 <strong>연도·월</strong>에서 월을 <strong>전체</strong>로 두면 일별 순매출은 그 해 1~12월을 한 번에 봅니다. 아래 <strong>실적 목표 표</strong>는 <strong>연도</strong>만 맞으면 넣어 둔 목표를 모두 보여 주며, <strong>일별 순매출의 보기 범위</strong>와는 별개입니다. 맨 위 카드의 <strong>실제 매출·주문</strong>은 그 <strong>보기 범위</strong>(전체·솔패스·챌린지·솔루틴)에 맞춰 집계하고, 막대·목표 둘째 줄도 <strong>같은 범위의 목표</strong>와 맞춥니다(전체: 한 줄 또는 분류별 합). <strong>연간 목표만</strong>을 켜면 표는 연간 행만 보이게 좁히고 스크롤합니다. 숫자는 <strong>상품군 미정</strong>만 빼고(교재·자소서 포함), <strong>시험용·관리자·테스트 주문</strong>도 뺍니다.</p>
                 <div class="sp-an-filters sp-an-filters--period" id="sp-an-filters">
                   <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">연도</span>
-                    <select class="sp-confirm" id="sp-an-filterY" title="실적 요약·일별 매출 표·목표 표에 쓰는 연도"></select>
+                    <select class="sp-confirm" id="sp-an-filterY" title="실적 요약·일별 표·목표 표(연도 필터)에 쓰는 연도"></select>
                   </label>
                   <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">월</span>
-                    <select class="sp-confirm" id="sp-an-filterM" title="월을 전체로 두면 해당 연도 1~12월 일별 순매출을 한 표에서 봅니다. 아래 목표 표에는 같은 해 월별 행이 함께 나옵니다.">
+                    <select class="sp-confirm" id="sp-an-filterM" title="맨 위 실적 카드·일별 순매출 표 기간. 목표 표는 연도만 맞으면 월·목표 구분 전부 표시(이 셀렉트와 무관)">
                       <option value="0">전체</option>
                       <option value="1">1월</option>
                       <option value="2">2월</option>
@@ -194,7 +194,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                     <div class="sp-an-viz__h4" id="sp-an-vizHeading" role="heading" aria-level="4"><span class="sp-an-viz__h4-main">일별 순매출</span> <span class="sp-an-viz__h4-meta" id="sp-an-vizPeriodMeta"></span></div>
                     <div class="sp-an-viz__toolbar" id="sp-an-vizToolbar">
                       <label class="sp-an-filters__f"><span class="sp-pm-filters__lbl">보기 범위</span>
-                        <select class="sp-confirm" id="sp-an-vizScope" title="전체는 모든 상품군 합계. 범위를 좁히면 솔패스·솔루틴·챌린지 등 상품별로 볼 수 있습니다">
+                        <select class="sp-confirm" id="sp-an-vizScope" title="일별 순매출 격자와 맨 위 실적 카드(실제·목표)가 함께 따르는 범위입니다">
                           <option value="entire">전체(사이트) — 상품군별</option>
                         </select>
                       </label>
@@ -222,7 +222,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                   <button type="button" class="sp-an-subtabs__btn" id="sp-an-subCount" role="tab" aria-selected="false" aria-controls="sp-an-tableWrap" tabindex="-1">건수</button>
                 </div>
                 <p class="sp-an-subtabs__lede" id="sp-an-subLede" aria-live="polite">아래 <strong>목표</strong> 표에서 <strong>매출(원)</strong> 열이 더 잘 보이게 켠 상태입니다.</p>
-                <p class="sp-an-table-legend" id="sp-an-tableLegend">▸ 위 <strong>연·월</strong>에 맞는 <strong>목표</strong> 행만 남깁니다(실적 카드와 별개로, 여기만 손으로 적습니다). <strong>연간 목표만</strong> 보려면 위 매출 블록의 같은 이름 버튼을 켭니다. 목표가 없으면 <strong>전년 동기</strong> 실적으로 비교하세요.</p>
+                <p class="sp-an-table-legend" id="sp-an-tableLegend">▸ 위에서 고른 <strong>연도</strong>에 저장해 둔 <strong>목표</strong>가 <strong>월·목표 구분 전부</strong> 여기에 보입니다(일별 표 <strong>보기 범위</strong>를 바꿔도 사라지지 않습니다). <strong>연간 목표만</strong>을 켜면 연간(월 0) 행만 좁혀 봅니다. 맨 위 카드는 <strong>보기 범위</strong>에 맞는 목표·실적만 비교합니다.</p>
                 <div class="sp-an-table-wrap" id="sp-an-tableWrap" role="tabpanel" aria-labelledby="sp-an-subSales">
                   <div class="sp-an-table-scroll">
                     <table class="sp-an-table sp-an-table--mode-sales" id="sp-an-table">
