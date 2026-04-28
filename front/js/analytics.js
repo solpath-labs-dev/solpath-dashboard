@@ -694,6 +694,7 @@ export function initAnalytics(mount) {
     btnInit: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnInit')),
     hint: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-hint')),
     loading: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-loading')),
+    btnRebuildAnalytics: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnRebuildAnalytics')),
     tbody: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-tbody')),
     subSales: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-subSales')),
     subCount: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-subCount')),
@@ -2683,6 +2684,9 @@ export function initAnalytics(mount) {
   if (el.btnReset) {
     el.btnReset.disabled = !GAS_MODE.canSync;
   }
+  if (el.btnRebuildAnalytics) {
+    el.btnRebuildAnalytics.disabled = !GAS_MODE.canSync;
+  }
 
   function validateRowInForm() {
     if (!el.inY || !el.inM || !el.inGoalTarget || !el.inAmt || !el.inCnt) {
@@ -2803,48 +2807,122 @@ export function initAnalytics(mount) {
     });
   }
 
+  async function rebuildAnalyticsSheets_() {
+    if (!GAS_MODE.canSync) {
+      return;
+    }
+    const ok = window.confirm(
+      '지표 DB를 다시 생성/연결하고 집계를 다시 채웁니다.\n\n' +
+        '문제가 있을 때만 사용하세요. 진행할까요?'
+    );
+    if (!ok) {
+      return;
+    }
+    if (el.btnRebuildAnalytics) {
+      el.btnRebuildAnalytics.disabled = true;
+    }
+    if (el.btnInit) {
+      el.btnInit.disabled = true;
+    }
+    if (el.btnReset) {
+      el.btnReset.disabled = true;
+    }
+    setHint('지표 DB를 준비하는 중…', true);
+    try {
+      const r = await gasJsonpWithParams(url, 'initAnalyticsSheets', null, 180000);
+      if (!r || !r.ok) {
+        logSolpathApi_('initAnalyticsSheets', r, null);
+        setHint(formatHintWithErrorCode_(r) || '지표 DB 준비에 실패했습니다.', true);
+        return;
+      }
+      const d0 = (r && r.data) || {};
+      applyAnalyticsHeaderUrls(mount, {
+        analyticsReady: true,
+        analyticsSpreadsheetUrl: d0.url
+      });
+      ready = true;
+      syncAnUi_();
+      await loadTargets();
+      void loadFactViz_();
+      void loadMasterActuals_();
+      setHint('지표 DB를 다시 준비했습니다.', true);
+      window.requestAnimationFrame(function () {
+        if (el.actuals) {
+          el.actuals.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    } catch (e) {
+      logSolpathApi_('initAnalyticsSheets', null, e);
+      const m = e && e.message != null ? String(e.message) : '';
+      setHint(
+        m === 'timeout'
+          ? '응답이 지연되었습니다. 잠시 뒤 다시 시도해 주세요.'
+          : '요청이 끝나지 않았습니다. 문제가 계속되면 담당자에게 알려 주세요.',
+        true
+      );
+    } finally {
+      if (el.btnRebuildAnalytics) {
+        el.btnRebuildAnalytics.disabled = !GAS_MODE.canSync;
+      }
+      if (el.btnInit) {
+        el.btnInit.disabled = !GAS_MODE.canSync;
+      }
+      if (el.btnReset) {
+        el.btnReset.disabled = !GAS_MODE.canSync;
+      }
+    }
+  }
+
+  async function resetAll_() {
+    if (!GAS_MODE.canSync || !ready) {
+      return;
+    }
+    const ok = window.confirm('여기에 적어 둔 목표·일 단위 캐시를 모두 비웁니다. 되돌릴 수 없습니다. 정말 진행할까요?');
+    if (!ok) {
+      return;
+    }
+    if (el.btnReset) {
+      el.btnReset.disabled = true;
+    }
+    if (el.loading) {
+      el.loading.removeAttribute('hidden');
+    }
+    setHint('초기화 중…', true);
+    try {
+      const r = await gasJsonpWithParams(url, 'analyticsResetAll', null, 120000);
+      if (!r || !r.ok) {
+        setHint(errMsg_(r) || '초기화에 실패했습니다.', true);
+        return;
+      }
+      localRows = [];
+      rebuildFilterYearMonth_();
+      render();
+      setHint('초기화했습니다.', true);
+    } catch (e) {
+      const m = e && e.message != null ? String(e.message) : '';
+      setHint(m === 'timeout' ? '응답이 지연되었습니다.' : '초기화에 실패했습니다.', true);
+    } finally {
+      if (el.loading) {
+        el.loading.setAttribute('hidden', '');
+      }
+      if (el.btnReset) {
+        el.btnReset.disabled = false;
+      }
+    }
+  }
+
   if (el.btnInit) {
     el.btnInit.addEventListener('click', async function () {
       if (!GAS_MODE.canSync) {
         return;
       }
-      el.btnInit.disabled = true;
-      setHint('만드는 중…', true);
-      try {
-        const r = await gasJsonpWithParams(url, 'initAnalyticsSheets', null, 120000);
-        if (!r || !r.ok) {
-          logSolpathApi_('initAnalyticsSheets', r, null);
-          setHint(formatHintWithErrorCode_(r) || '데이터 생성에 실패했습니다.', true);
-          return;
-        }
-        const d0 = (r && r.data) || {};
-        applyAnalyticsHeaderUrls(mount, {
-          analyticsReady: true,
-          analyticsSpreadsheetUrl: d0.analyticsSpreadsheetUrl
-        });
-        ready = true;
-        syncAnUi_();
-        await loadTargets();
-        setHint('드라이브에 목표 표가 준비됐습니다. 위 실적은 솔루션편입(아임웹) 연동·동기화 기준이고, 아래는 팀에서 정한 목표만 적습니다.', true);
-        window.requestAnimationFrame(function () {
-          if (el.actuals) {
-            el.actuals.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        });
-      } catch (e) {
-        logSolpathApi_('initAnalyticsSheets', null, e);
-        const m = e && e.message != null ? String(e.message) : '';
-        setHint(
-          m === 'timeout'
-            ? '응답이 지연되었습니다. 잠시 뒤 다시 시도해 주세요.'
-            : '요청이 끝나지 않았습니다. 문제가 계속되면 담당자에게 알려 주세요.',
-          true
-        );
-      } finally {
-        if (el.btnInit) {
-          el.btnInit.disabled = false;
-        }
-      }
+      await rebuildAnalyticsSheets_();
+    });
+  }
+
+  if (el.btnRebuildAnalytics) {
+    el.btnRebuildAnalytics.addEventListener('click', async function () {
+      await rebuildAnalyticsSheets_();
     });
   }
 
@@ -2887,43 +2965,7 @@ export function initAnalytics(mount) {
 
   if (el.btnReset) {
     el.btnReset.addEventListener('click', async function () {
-      if (!GAS_MODE.canSync || !ready) {
-        return;
-      }
-      const ok = window.confirm(
-        '여기에 적어 둔 목표·일 단위 캐시를 모두 비웁니다. 되돌릴 수 없습니다. 정말 진행할까요?'
-      );
-      if (!ok) {
-        return;
-      }
-      if (el.btnReset) {
-        el.btnReset.disabled = true;
-      }
-      if (el.loading) {
-        el.loading.removeAttribute('hidden');
-      }
-      setHint('초기화 중…', true);
-      try {
-        const r = await gasJsonpWithParams(url, 'analyticsResetAll', null, 120000);
-        if (!r || !r.ok) {
-          setHint(errMsg_(r) || '초기화에 실패했습니다.', true);
-          return;
-        }
-        localRows = [];
-        rebuildFilterYearMonth_();
-        render();
-        setHint('초기화했습니다.', true);
-      } catch (e) {
-        const m = e && e.message != null ? String(e.message) : '';
-        setHint(m === 'timeout' ? '응답이 지연되었습니다.' : '초기화에 실패했습니다.', true);
-      } finally {
-        if (el.loading) {
-          el.loading.setAttribute('hidden', '');
-        }
-        if (el.btnReset) {
-          el.btnReset.disabled = false;
-        }
-      }
+      await resetAll_();
     });
   }
 

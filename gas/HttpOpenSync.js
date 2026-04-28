@@ -98,9 +98,9 @@ function openSyncAllowedActions_() {
     'productMappingApply',
     'productMappingReset',
     'initAnalyticsSheets',
-    'analyticsSheetsRepair',
     'analyticsTargetsGet',
     'analyticsTargetsApply',
+    'analyticsTableExport',
     'analyticsResetAll',
     'analyticsMasterActualsGet',
     'analyticsFactRebuild',
@@ -180,9 +180,6 @@ function openSyncRouteAction_(action, e) {
       }
     };
   }
-  if (action === 'analyticsSheetsRepair') {
-    return dbAnalyticsSheetsRepair_();
-  }
   if (action === 'analyticsTargetsGet') {
     return dbAnalyticsTargetsRead_();
   }
@@ -192,6 +189,13 @@ function openSyncRouteAction_(action, e) {
       return { ok: false, error: { code: 'BAD_REQUEST', message: 'payload 또는 rows 없음' } };
     }
     return dbAnalyticsTargetsApply_(tr);
+  }
+  if (action === 'analyticsTableExport') {
+    var pEx = openSyncExtractPayloadJson_(e);
+    if (!pEx) {
+      return { ok: false, error: { code: 'BAD_REQUEST', message: 'payload 없음' } };
+    }
+    return dbAnalyticsExportTableToSheet_(pEx);
   }
   if (action === 'analyticsResetAll') {
     return dbAnalyticsResetAll_();
@@ -357,6 +361,47 @@ function openSyncExtractTargetRowsForApply_(e) {
 }
 
 /**
+ * payload(JSON 문자열)를 객체로 읽는다.
+ * @param {Object} e
+ * @return {Object|null}
+ */
+function openSyncExtractPayloadJson_(e) {
+  e = e || {};
+  var p = e.parameter || {};
+  var bodyText = p.payload != null ? String(p.payload) : '';
+  if (!bodyText.length && e.postData && e.postData.contents) {
+    var lo0 = (e.postData.type != null ? String(e.postData.type) : '').toLowerCase();
+    if (lo0.indexOf('application/x-www-form-urlencoded') >= 0 || lo0.indexOf('text/plain') >= 0 || !lo0.length) {
+      var f0 = openSyncParseFormUrlEncoded_(String(e.postData.contents));
+      if (f0 && f0.payload != null) {
+        bodyText = String(f0.payload);
+      }
+    }
+  }
+  if (bodyText.length) {
+    try {
+      return JSON.parse(bodyText);
+    } catch (e1) {
+      try {
+        return JSON.parse(decodeURIComponent(bodyText));
+      } catch (e2) {
+        return null;
+      }
+    }
+  }
+  if (e.postData && e.postData.contents) {
+    var raw = String(e.postData.contents);
+    var lo = (e.postData.type != null ? String(e.postData.type) : '').toLowerCase();
+    if (lo.indexOf('application/json') >= 0) {
+      try {
+        return JSON.parse(raw);
+      } catch (ej) {}
+    }
+  }
+  return null;
+}
+
+/**
  * @param {Object} e
  * @return {string}
  */
@@ -457,11 +502,11 @@ function doPost(e) {
       }
     });
   }
-  if (jBody && jBody.action === 'analyticsSheetsRepair') {
-    return openSyncTextOutputJson_(dbAnalyticsSheetsRepair_());
-  }
   if (jBody && jBody.action === 'analyticsTargetsApply' && jBody.rows != null && Array.isArray(jBody.rows)) {
     return openSyncTextOutputJson_(dbAnalyticsTargetsApply_(jBody.rows));
+  }
+  if (jBody && jBody.action === 'analyticsTableExport') {
+    return openSyncTextOutputJson_(dbAnalyticsExportTableToSheet_(jBody));
   }
   var action = '';
   try {

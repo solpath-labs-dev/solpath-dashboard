@@ -122,6 +122,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
               <p class="sp-pm__hint" id="sp-an-hint" hidden></p>
               <div class="sp-confirm-row">
                 <button type="button" class="btn btn--secondary" id="sp-an-btnExportBundleTop">통합 시트 저장</button>
+                <button type="button" class="btn btn--danger" id="sp-an-btnRebuildAnalytics" title="지표 DB를 다시 생성/연결하고, 집계 데이터를 다시 채웁니다.">지표 DB 초기화(재생성)</button>
               </div>
               <div class="sp-an-pillar sp-an-pillar--sales" id="sp-an-pillarSales">
                 <div class="sp-an-pillar__title" role="heading" aria-level="2">매출 현황</div>

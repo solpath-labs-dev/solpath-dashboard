@@ -27,7 +27,7 @@ function dbAnalyticsOrderYearBoundsForUi_() {
   var r0;
   for (r0 = 2; r0 <= lr; r0 += BATCH) {
     var r1 = Math.min(r0 + BATCH - 1, lr);
-    var vals = sh.getRange(r0, colTime, r1, colTime).getValues();
+    var vals = sh.getRange(r0, colTime, r1 - r0 + 1, 1).getValues();
     var j;
     for (j = 0; j < vals.length; j++) {
       var ymd = dbAnAnyToSeoulYmd_(vals[j][0]);
@@ -84,6 +84,9 @@ function dbMergeAnalyticsIntoPmData_(data) {
 /**
  * @return {{ analyticsReady: boolean, reason: string, analyticsSpreadsheetUrl: string, analyticsKpiSheetName: string, analyticsFactSheetName: string, analyticsOrderLinesSheetName: string }}
  */
+var DB_ANALYTICS_SPREADSHEET_TITLE = '솔루션편입_집계_매출건수';
+var DB_ANALYTICS_SPREADSHEET_LEGACY_TITLE = '솔루션편입_일월간_매출_인원_지표';
+
 function dbAnalyticsStateFields_() {
   var p = PropertiesService.getScriptProperties();
   var aId = p.getProperty(DB_PROP_SHEETS_ANALYTICS_ID);
@@ -100,17 +103,11 @@ function dbAnalyticsStateFields_() {
     return empty;
   }
   if (!dbDriveSpreadsheetIdIsUsableNow_(aId)) {
-    try {
-      p.deleteProperty(DB_PROP_SHEETS_ANALYTICS_ID);
-    } catch (d) {}
     return empty;
   }
   try {
     var ss = SpreadsheetApp.openById(aId);
     if (!ss) {
-      try {
-        p.deleteProperty(DB_PROP_SHEETS_ANALYTICS_ID);
-      } catch (d) {}
       return empty;
     }
     return {
@@ -123,9 +120,6 @@ function dbAnalyticsStateFields_() {
     };
   } catch (x) {
     Logger.log('dbAnalyticsStateFields_: ' + (x && x.message != null ? x.message : String(x)));
-    try {
-      p.deleteProperty(DB_PROP_SHEETS_ANALYTICS_ID);
-    } catch (d) {}
     return empty;
   }
 }
@@ -228,19 +222,52 @@ function dbAnOpenOrThrow_() {
   }
   var sid = String(id).trim();
   if (!dbDriveSpreadsheetIdIsUsableNow_(sid)) {
-    try {
-      p.deleteProperty(DB_PROP_SHEETS_ANALYTICS_ID);
-    } catch (d) {}
     throw new Error('NO_ANALYTICS_SHEET');
   }
   try {
     return SpreadsheetApp.openById(sid);
   } catch (e) {
     Logger.log('dbAnOpenOrThrow_: ' + (e && e.message != null ? e.message : String(e)));
-    try {
-      p.deleteProperty(DB_PROP_SHEETS_ANALYTICS_ID);
-    } catch (d) {}
     throw new Error('NO_ANALYTICS_SHEET');
+  }
+}
+
+/**
+ * @param {string} folderId
+ * @param {string[]} names
+ * @return {string}
+ */
+function dbAnFindSpreadsheetIdByNamesInFolder_(folderId, names) {
+  if (!folderId) {
+    return '';
+  }
+  try {
+    var folder = DriveApp.getFolderById(String(folderId).trim());
+    var ni;
+    for (ni = 0; ni < names.length; ni++) {
+      var n = names[ni] != null ? String(names[ni]).trim() : '';
+      if (!n) {
+        continue;
+      }
+      var it = folder.getFilesByName(n);
+      while (it.hasNext()) {
+        var f = it.next();
+        if (f.getMimeType && f.getMimeType() !== 'application/vnd.google-apps.spreadsheet') {
+          continue;
+        }
+        var fid = f.getId();
+        if (!fid) {
+          continue;
+        }
+        if (dbDriveSpreadsheetIdIsUsableNow_(fid)) {
+          return String(fid).trim();
+        }
+      }
+    }
+    return '';
+  } catch (e) {
+    Logger.log('dbAnFindSpreadsheetIdByNamesInFolder_: ' + (e && e.message != null ? e.message : String(e)));
+    return '';
   }
 }
 
@@ -348,7 +375,7 @@ function dbAnalyticsOrderLinesRebuildFromMaster_() {
   var orderToMember = {};
   if (shO && shO.getLastRow() >= 2) {
     var oLr = shO.getLastRow();
-    var ov = shO.getRange(2, 1, oLr, 3).getValues();
+    var ov = shO.getRange(2, 1, oLr - 1, 3).getValues();
     var oi;
     for (oi = 0; oi < ov.length; oi++) {
       var ol = ov[oi] || [];
@@ -364,7 +391,7 @@ function dbAnalyticsOrderLinesRebuildFromMaster_() {
   if (shMem && shMem.getLastRow() >= 2) {
     var mLr = shMem.getLastRow();
     var mW = DB_MEMBERS_HEADERS.length;
-    var mVals = shMem.getRange(2, 1, mLr, mW).getValues();
+    var mVals = shMem.getRange(2, 1, mLr - 1, mW).getValues();
     var ixMc = DB_MEMBERS_HEADERS.indexOf('member_code');
     var ixGt = DB_MEMBERS_HEADERS.indexOf('group_titles');
     if (ixMc < 0) {
@@ -385,7 +412,7 @@ function dbAnalyticsOrderLinesRebuildFromMaster_() {
   var addByProd = {};
   if (shP && shP.getLastRow() >= 2) {
     var pLr = shP.getLastRow();
-    var pv = shP.getRange(2, 1, pLr, 11).getValues();
+    var pv = shP.getRange(2, 1, pLr - 1, 11).getValues();
     var pi;
     for (pi = 0; pi < pv.length; pi++) {
       var pLine = pv[pi] || [];
@@ -398,7 +425,7 @@ function dbAnalyticsOrderLinesRebuildFromMaster_() {
   var pmMap = dbPmReadMappingMap_();
   var iLr = shI.getLastRow();
   var nCol = 11;
-  var iVals = shI.getRange(2, 1, iLr, nCol).getValues();
+  var iVals = shI.getRange(2, 1, iLr - 1, nCol).getValues();
   var out = [];
   var skipped = 0;
   var j;
@@ -459,9 +486,6 @@ function dbInitAnalyticsSheets_() {
     existing = existing != null ? String(existing).trim() : '';
     if (existing) {
       if (!dbDriveSpreadsheetIdIsUsableNow_(existing)) {
-        try {
-          p.deleteProperty(DB_PROP_SHEETS_ANALYTICS_ID);
-        } catch (del) {}
         existing = '';
       } else {
         try {
@@ -481,9 +505,6 @@ function dbInitAnalyticsSheets_() {
           };
         } catch (e0) {
           Logger.log('dbInitAnalyticsSheets_: existing open fail ' + (e0 && e0.message));
-          try {
-            p.deleteProperty(DB_PROP_SHEETS_ANALYTICS_ID);
-          } catch (del) {}
           existing = '';
         }
       }
@@ -506,7 +527,31 @@ function dbInitAnalyticsSheets_() {
       };
     }
 
-    var title = '솔루션편입_일월간_매출_인원_지표';
+    if (!existing) {
+      var reusedId = dbAnFindSpreadsheetIdByNamesInFolder_(
+        folderId,
+        [DB_ANALYTICS_SPREADSHEET_TITLE, DB_ANALYTICS_SPREADSHEET_LEGACY_TITLE]
+      );
+      if (reusedId) {
+        var ssReuse = SpreadsheetApp.openById(reusedId);
+        dbAnGetGoalsSheet_(ssReuse);
+        dbAnGetOrderLinesSheet_(ssReuse);
+        p.setProperty(DB_PROP_SHEETS_ANALYTICS_ID, reusedId);
+        try {
+          dbAnalyticsOrderLinesRebuildFromMaster_();
+        } catch (eRR) {
+          Logger.log('dbInitAnalyticsSheets_ reused rebuild: ' + (eRR && eRR.message));
+        }
+        return {
+          id: reusedId,
+          url: 'https://docs.google.com/spreadsheets/d/' + reusedId + '/edit',
+          already: true,
+          createdNew: false
+        };
+      }
+    }
+
+    var title = DB_ANALYTICS_SPREADSHEET_TITLE;
     var file = dbDriveCreateSpreadsheetInFolder_(title, folderId);
     if (!file || !file.id) {
       return {
@@ -600,6 +645,66 @@ function dbAnalyticsSheetsRepair_() {
 /** `01_연월_목표.goal_target` — 전체 + 일별 매출 표와 같은 네 상품군만 허용 */
 var _DB_ANALYTICS_GOAL_TARGETS_ALLOWED = ['entire', 'solpass', 'challenge', 'solutine'];
 
+/**
+ * 시트/클라이언트에서 온 표기 → 허용 키
+ * @param {string} s
+ * @return {string}
+ */
+function dbAnNormalizeGoalTargetKey_(s) {
+  var t = s != null ? String(s).trim().toLowerCase() : '';
+  if (!t.length) {
+    return '';
+  }
+  if (_DB_ANALYTICS_GOAL_TARGETS_ALLOWED.indexOf(t) >= 0) {
+    return t;
+  }
+  var aliases = {
+    전체: 'entire',
+    솔패스: 'solpass',
+    챌린지: 'challenge',
+    솔루틴: 'solutine'
+  };
+  return aliases[t] != null ? aliases[t] : t;
+}
+
+/**
+ * 목표 시트 year 셀
+ * @param {*} v
+ * @return {number} 유효하지 않으면 NaN
+ */
+function dbAnCoerceGoalsYear_(v) {
+  if (v instanceof Date) {
+    if (isNaN(v.getTime())) {
+      return NaN;
+    }
+    return v.getFullYear();
+  }
+  var n = parseInt(String(v != null ? v : '').replace(/[, \s]/g, ''), 10);
+  return isNaN(n) ? NaN : n;
+}
+
+/**
+ * 목표 시트 month 셀 (0=연간, 1–12=월)
+ * @param {*} v
+ * @return {number} 유효하지 않으면 NaN
+ */
+function dbAnCoerceGoalsMonth_(v) {
+  if (v instanceof Date) {
+    if (isNaN(v.getTime())) {
+      return NaN;
+    }
+    return v.getMonth() + 1;
+  }
+  var n = parseInt(String(v != null ? v : '').replace(/[, \s]/g, ''), 10);
+  if (isNaN(n)) {
+    return NaN;
+  }
+  if (n >= 0 && n <= 12) {
+    return n;
+  }
+  return NaN;
+}
+
 function dbAnValidYearMonth_(y, m) {
   if (typeof y !== 'number' || !isFinite(y) || y < 2000 || y > 2100) {
     return false;
@@ -618,16 +723,14 @@ function dbAnValidateTargetRow_(r) {
   if (!r || typeof r !== 'object') {
     return false;
   }
-  var y = Number(r.year);
-  var mo = Number(r.month);
+  var y = dbAnCoerceGoalsYear_(r.year);
+  var mo = dbAnCoerceGoalsMonth_(r.month);
   if (!dbAnValidYearMonth_(y, mo)) {
     return false;
   }
-  var gt = String(
-    r.goal_target != null ? r.goal_target : r.goalTarget != null ? r.goalTarget : ''
-  )
-    .trim()
-    .toLowerCase();
+  var gt = dbAnNormalizeGoalTargetKey_(
+    String(r.goal_target != null ? r.goal_target : r.goalTarget != null ? r.goalTarget : '')
+  );
   if (!gt.length) {
     return false;
   }
@@ -683,17 +786,15 @@ function dbAnalyticsTargetsRead_() {
     return { ok: true, data: { rows: [] } };
   }
   var w = DB_ANALYTICS_GOALS_HEADERS.length;
-  var vals = sh.getRange(2, 1, lr, w).getValues();
+  var vals = sh.getRange(2, 1, lr - 1, w).getValues();
   var rows = [];
   var i;
   for (i = 0; i < vals.length; i++) {
     var line = vals[i] || [];
     rows.push({
-      year: line[0],
-      month: line[1],
-      goal_target: String(line[2] != null ? line[2] : '')
-        .trim()
-        .toLowerCase(),
+      year: dbAnCoerceGoalsYear_(line[0]),
+      month: dbAnCoerceGoalsMonth_(line[1]),
+      goal_target: dbAnNormalizeGoalTargetKey_(String(line[2] != null ? line[2] : '')),
       sales_target: line[3],
       people_target: line[4]
     });
@@ -744,11 +845,11 @@ function dbAnalyticsTargetsApply_(rows) {
   var out = [];
   for (i = 0; i < rows.length; i++) {
     var r = rows[i];
-    var y2 = Number(r.year);
-    var mo2 = Number(r.month);
-    var gta = String(r.goal_target != null ? r.goal_target : r.goalTarget != null ? r.goalTarget : '')
-      .trim()
-      .toLowerCase();
+    var y2 = dbAnCoerceGoalsYear_(r.year);
+    var mo2 = dbAnCoerceGoalsMonth_(r.month);
+    var gta = dbAnNormalizeGoalTargetKey_(
+      String(r.goal_target != null ? r.goal_target : r.goalTarget != null ? r.goalTarget : '')
+    );
     var sW =
       r.sales_target != null
         ? r.sales_target
@@ -828,7 +929,7 @@ function dbAnReadMasterProductAddTimeYm_(master) {
     return o;
   }
   var lr = sh.getLastRow();
-  var vals = sh.getRange(2, 1, lr, 11).getValues();
+  var vals = sh.getRange(2, 1, lr - 1, 11).getValues();
   var i;
   for (i = 0; i < vals.length; i++) {
     var L = vals[i] || [];
@@ -923,7 +1024,7 @@ function dbAnAggregateOrdersForYm_(ss, y, m) {
     return empty;
   }
   /** B: order_time, C: member, L: payment — getRange(2,2, lr, 12) */
-  var data = sh.getRange(2, 2, lr, 12).getValues();
+  var data = sh.getRange(2, 2, lr - 1, 12).getValues();
   var totalSales = 0;
   var orderCount = 0;
   var memSet = {};
@@ -1002,7 +1103,7 @@ function dbAnSalesCardsMetricsFrom02_(ssA, y, m, scopeCat) {
     return z;
   }
   var w0 = DB_ANALYTICS_ORDER_LINE_HEADERS.length;
-  var vals = sh.getRange(2, 1, lr, w0).getValues();
+  var vals = sh.getRange(2, 1, lr - 1, w0).getValues();
 
   var master = null;
   try {
@@ -1257,7 +1358,7 @@ function dbAnFactDeleteRowsYmdInMonth_(shF, pfx) {
   }
   var w = DB_ANALYTICS_ORDER_LINE_HEADERS.length;
   var colT = 4;
-  var tVals = shF.getRange(2, colT, lr, colT).getValues();
+  var tVals = shF.getRange(2, colT, lr - 1, 1).getValues();
   var keepRows = [];
   var r;
   var removed = 0;
@@ -1273,15 +1374,15 @@ function dbAnFactDeleteRowsYmdInMonth_(shF, pfx) {
     return 0;
   }
   if (keepRows.length < 1) {
-    shF.getRange(2, 1, lr, w).clearContent();
+    shF.getRange(2, 1, lr - 1, w).clearContent();
     return removed;
   }
-  var all = shF.getRange(2, 1, lr, w).getValues();
+  var all = shF.getRange(2, 1, lr - 1, w).getValues();
   var newRows = [];
   for (r = 0; r < keepRows.length; r++) {
     newRows.push(all[keepRows[r]]);
   }
-  shF.getRange(2, 1, lr, w).clearContent();
+  shF.getRange(2, 1, lr - 1, w).clearContent();
   shF.getRange(2, 1, newRows.length, w).setValues(newRows);
   return removed;
 }
@@ -1305,7 +1406,7 @@ function dbAnVirtualFactRowsFromOrderLines_(y, m) {
     return { ok: true, data: { rows: [] } };
   }
   var w0 = DB_ANALYTICS_ORDER_LINE_HEADERS.length;
-  var vals = sh.getRange(2, 1, lr, w0).getValues();
+  var vals = sh.getRange(2, 1, lr - 1, w0).getValues();
 
   var master = null;
   try {
@@ -1318,7 +1419,7 @@ function dbAnVirtualFactRowsFromOrderLines_(y, m) {
     var shO = master.getSheetByName(DB_SHEET_ORDERS);
     if (shO && shO.getLastRow() >= 2) {
       var oLr2 = shO.getLastRow();
-      var oVals2 = shO.getRange(2, 1, oLr2, 3).getValues();
+      var oVals2 = shO.getRange(2, 1, oLr2 - 1, 3).getValues();
       var oi2;
       for (oi2 = 0; oi2 < oVals2.length; oi2++) {
         var oLn = oVals2[oi2] || [];

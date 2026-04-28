@@ -128,6 +128,41 @@ function dbMemberExtractSiteGroupCodes_(groupVal) {
   return out;
 }
 
+/**
+ * 한국 전화번호 정규화(저장용): 000-0000-0000
+ * - 02(서울) 10자리: 02-1234-5678
+ * - 휴대폰/지역번호 11자리: 010-1234-5678, 031-1234-5678
+ * - 10자리(비 02): 031-123-4567
+ * @param {*} raw
+ * @return {string}
+ */
+function dbNormalizeKrPhoneDashed_(raw) {
+  var s = raw != null ? String(raw).trim() : '';
+  if (!s.length) {
+    return '';
+  }
+  var d = s.replace(/[^\d]/g, '');
+  if (!d.length) {
+    return '';
+  }
+  if (d.indexOf('82') === 0) {
+    d = '0' + d.slice(2);
+  }
+  if (d.length === 11) {
+    return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+  }
+  if (d.length === 10) {
+    if (d.indexOf('02') === 0) {
+      return d.slice(0, 2) + '-' + d.slice(2, 6) + '-' + d.slice(6);
+    }
+    return d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6);
+  }
+  if (d.length === 9 && d.indexOf('02') === 0) {
+    return d.slice(0, 2) + '-' + d.slice(2, 5) + '-' + d.slice(5);
+  }
+  return d;
+}
+
 function dbSyncMembersOpen() {
   var p = PropertiesService.getScriptProperties();
   var access = p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN') != null ? String(p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN')).trim() : '';
@@ -219,7 +254,7 @@ function dbMapMemberRowOpen_(m, fetchedAtIso, sourceSyncId, codeToTitle) {
     m.memberCode != null ? String(m.memberCode) : '',
     m.uid != null ? String(m.uid) : '',
     m.name != null ? String(m.name) : '',
-    m.callnum != null ? String(m.callnum) : '',
+    dbNormalizeKrPhoneDashed_(m.callnum),
     m.gender != null ? String(m.gender) : '',
     m.birth != null ? String(m.birth) : '',
     m.address != null ? String(m.address) : '',

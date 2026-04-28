@@ -54,7 +54,7 @@ function dbPmSeedProductMappingFromMaster_(opsSs, forceReseed) {
     return 0;
   }
   var nColsP = DB_PRODUCTS_HEADERS.length;
-  var pVals = ps.getRange(2, 1, lr, nColsP).getValues();
+  var pVals = ps.getRange(2, 1, lr - 1, nColsP).getValues();
   var nColsM = DB_PRODUCT_MAPPING_HEADERS.length;
   var idxProdNo = 0;
   var idxName = 3;
@@ -367,7 +367,7 @@ function dbProductMappingList_() {
     return { ok: true, data: { rows: [], counts: { unmapped: 0, solpass: 0, solutine: 0, challenge: 0, textbook: 0 } } };
   }
   var nColsP = DB_PRODUCTS_HEADERS.length;
-  var pVals = ps.getRange(2, 1, lr, nColsP).getValues();
+  var pVals = ps.getRange(2, 1, lr - 1, nColsP).getValues();
   var idxProdNo = 0;
   var idxName = 3;
   var idxAddTime = 9;
@@ -450,7 +450,7 @@ function dbPmReadMappingMap_() {
     return o;
   }
   var nCols = DB_PRODUCT_MAPPING_HEADERS.length;
-  var v = sh.getRange(2, 1, lr, nCols).getValues();
+  var v = sh.getRange(2, 1, lr - 1, nCols).getValues();
   var i;
   for (i = 0; i < v.length; i++) {
     var line = v[i] || [];
@@ -539,7 +539,7 @@ function dbProductMappingApply_(inputRows) {
   var colProdNo = 0;
   var indexByKey = {};
   if (lr >= 2) {
-    var aVals = sh.getRange(2, 1, lr, 1).getValues();
+    var aVals = sh.getRange(2, 1, lr - 1, 1).getValues();
     var a;
     for (a = 0; a < aVals.length; a++) {
       var k0 = dbPmRowKey_(aVals[a] != null && aVals[a].length ? aVals[a][0] : aVals[a]);
@@ -616,7 +616,7 @@ function dbProductMappingApply_(inputRows) {
     var rowIdx = indexByKey[k];
     var created0 = now;
     if (rowIdx) {
-      var old = sh.getRange(rowIdx, 1, rowIdx, nCols).getValues()[0] || [];
+      var old = sh.getRange(rowIdx, 1, 1, nCols).getValues()[0] || [];
       if (old[4] && String(old[4]).length) {
         created0 = String(old[4]);
       }
