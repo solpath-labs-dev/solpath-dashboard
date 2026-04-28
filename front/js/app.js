@@ -499,9 +499,12 @@ async function postManualSync_() {
   setStatus('수동 동기화 시작…');
   setHint('');
   try {
+    console.log('[manualSync] start');
     setStatus('원천 DB 동기화 중…');
     const r1 = await gasJsonp_(url, 'syncMasterNow', 360000);
+    console.log('[manualSync] syncMasterNow response:', r1);
     if (!r1 || !r1.ok) {
+      console.error('[manualSync] syncMasterNow failed:', r1);
       setChip('실패', 'err');
       setStatus('원천 DB 동기화를 완료하지 못했습니다.');
       setHint(r1 && (r1.message || (r1.error && r1.error.message) || r1.error) ? String(r1.message || (r1.error && r1.error.message) || r1.error) : '');
@@ -509,7 +512,9 @@ async function postManualSync_() {
     }
     setStatus('운영 DB 갱신 중…(누락 상품만 추가)');
     const r2 = await gasJsonp_(url, 'operationsMappingUpsertMissing', 180000);
+    console.log('[manualSync] operationsMappingUpsertMissing response:', r2);
     if (!r2 || !r2.ok) {
+      console.error('[manualSync] operationsMappingUpsertMissing failed:', r2);
       setChip('실패', 'err');
       setStatus('운영 DB 갱신을 완료하지 못했습니다.');
       setHint(r2 && (r2.message || (r2.error && r2.error.message) || r2.error) ? String(r2.message || (r2.error && r2.error.message) || r2.error) : '');
@@ -517,7 +522,9 @@ async function postManualSync_() {
     }
     setStatus('집계 DB 갱신 중…(02 재구축)');
     const r3 = await gasJsonp_(url, 'analyticsRebuild02', 360000);
+    console.log('[manualSync] analyticsRebuild02 response:', r3);
     if (!r3 || !r3.ok) {
+      console.error('[manualSync] analyticsRebuild02 failed:', r3);
       setChip('실패', 'err');
       setStatus('집계 DB 갱신을 완료하지 못했습니다.');
       setHint(r3 && (r3.message || (r3.error && r3.error.message) || r3.error) ? String(r3.message || (r3.error && r3.error.message) || r3.error) : '');
@@ -543,7 +550,9 @@ async function postManualSync_() {
         ')'
     );
     setHint('');
+    console.log('[manualSync] done');
   } catch (e) {
+    console.error('[manualSync] exception:', e);
     setChip('오류', 'err');
     setStatus('수동 동기화 요청이 완료되지 않았습니다.');
     setHint(e && e.message != null ? String(e.message) : '');
