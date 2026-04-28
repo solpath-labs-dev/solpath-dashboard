@@ -33,7 +33,8 @@ function dbDriveSpreadsheetIdIsUsableNow_(fileId) {
 
 /**
  * Properties의 `SHEETS_MASTER_ID`로 원천 DB를 연다.
- * Drive에서 id가 **무효**면(없음·휴지통·mime 아님) **SpreadsheetApp이 성공해도** Property를 버리고 `dbSetupMasterDatabase()`로 재생성. open 예외는 보조.
+ * Drive에서 id가 무효/열기 실패면 **자동으로 새 DB를 만들지 않는다**.
+ * (자동 재생성은 원천DB가 여러 개로 갈라져 데이터가 꼬이는 원인이므로 금지)
  * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet}
  */
 function dbOpenMaster_() {
@@ -44,30 +45,14 @@ function dbOpenMaster_() {
   }
   var sid = String(id).trim();
   if (!dbDriveSpreadsheetIdIsUsableNow_(sid)) {
-    Logger.log('dbOpenMaster_: Drive에서 id 무효(삭제·휴지통·mime) — SHEETS_MASTER_ID 제거 후 dbSetupMasterDatabase');
-    try {
-      p.deleteProperty(DB_PROP_SHEETS_MASTER_ID);
-    } catch (d) {}
-    var info0 = dbSetupMasterDatabase();
-    if (!info0 || !info0.id) {
-      throw new Error('원천 DB를 열 수 없고 재생성도 실패했습니다. Drive 폴더·`SHEETS_MASTER_PARENT_FOLDER_ID`·권한을 확인하세요.');
-    }
-    return SpreadsheetApp.openById(String(info0.id).trim());
+    throw new Error('NO_SHEETS_MASTER: SHEETS_MASTER_ID 가 Drive에서 유효하지 않습니다(삭제·휴지통·권한·mime).');
   }
   try {
     return SpreadsheetApp.openById(sid);
   } catch (e) {
-    Logger.log(
-      'dbOpenMaster_: openById 실패 — SHEETS_MASTER_ID 제거 후 dbSetupMasterDatabase. ' + (e && e.message != null ? e.message : String(e))
+    throw new Error(
+      'NO_SHEETS_MASTER: SHEETS_MASTER_ID openById 실패. ' + (e && e.message != null ? e.message : String(e))
     );
-    try {
-      p.deleteProperty(DB_PROP_SHEETS_MASTER_ID);
-    } catch (d) {}
-    var info = dbSetupMasterDatabase();
-    if (!info || !info.id) {
-      throw new Error('원천 DB를 열 수 없고 재생성도 실패했습니다. Drive 폴더·`SHEETS_MASTER_PARENT_FOLDER_ID`·권한을 확인하세요.');
-    }
-    return SpreadsheetApp.openById(String(info.id).trim());
   }
 }
 

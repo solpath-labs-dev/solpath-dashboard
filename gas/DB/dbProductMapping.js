@@ -146,11 +146,13 @@ function dbInitOperationsSheets_() {
   existing = existing != null ? String(existing).trim() : '';
   if (existing) {
     if (!dbDriveSpreadsheetIdIsUsableNow_(existing)) {
-      Logger.log('dbInitOperationsSheets_: SHEETS_OPERATIONS_ID 가 Drive에 없음·휴지통 등 — Property 제거');
-      try {
-        p.deleteProperty(DB_PROP_SHEETS_OPERATIONS_ID);
-      } catch (del) {}
-      existing = '';
+      return {
+        error: {
+          code: 'NO_OPERATIONS_SHEET',
+          message:
+            '운영 DB(SHEETS_OPERATIONS_ID)가 Drive에서 유효하지 않습니다(삭제·휴지통·권한·mime). 자동 재생성은 하지 않습니다. 올바른 파일로 재연결하거나, 정말 새로 만들려면 SHEETS_OPERATIONS_ID를 비운 뒤 다시 실행하세요.'
+        }
+      };
     } else {
       try {
         var ss0 = SpreadsheetApp.openById(existing);
@@ -168,11 +170,15 @@ function dbInitOperationsSheets_() {
           seededRowCount: nSeed0
         };
       } catch (e0) {
-        Logger.log('dbInitOperationsSheets_: existing id open fail, will recreate. ' + (e0 && e0.message));
-        try {
-          p.deleteProperty(DB_PROP_SHEETS_OPERATIONS_ID);
-        } catch (del) {}
-        existing = '';
+        return {
+          error: {
+            code: 'NO_OPERATIONS_SHEET',
+            message:
+              '운영 DB(SHEETS_OPERATIONS_ID)를 열지 못했습니다. 자동 재생성은 하지 않습니다. 권한/Drive 상태를 확인하고 재시도하거나, 올바른 파일 ID로 재연결하세요. (' +
+              (e0 && e0.message != null ? String(e0.message) : String(e0)) +
+              ')'
+          }
+        };
       }
     }
   }
@@ -226,18 +232,11 @@ function dbPmOpenOpsOrThrow_() {
   }
   var sid = String(id).trim();
   if (!dbDriveSpreadsheetIdIsUsableNow_(sid)) {
-    try {
-      p.deleteProperty(DB_PROP_SHEETS_OPERATIONS_ID);
-    } catch (d) {}
     throw new Error('NO_OPERATIONS_SHEET');
   }
   try {
     return SpreadsheetApp.openById(sid);
   } catch (e) {
-    Logger.log('dbPmOpenOpsOrThrow_: openById 실패 — SHEETS_OPERATIONS_ID 제거. ' + (e && e.message != null ? e.message : String(e)));
-    try {
-      p.deleteProperty(DB_PROP_SHEETS_OPERATIONS_ID);
-    } catch (d) {}
     throw new Error('NO_OPERATIONS_SHEET');
   }
 }
@@ -262,9 +261,6 @@ function dbProductMappingState_() {
     };
   }
   if (!dbDriveSpreadsheetIdIsUsableNow_(id)) {
-    try {
-      p.deleteProperty(DB_PROP_SHEETS_OPERATIONS_ID);
-    } catch (d) {}
     return {
       ok: true,
       data: dbMergeAnalyticsIntoPmData_({
@@ -278,9 +274,6 @@ function dbProductMappingState_() {
   try {
     var ss = SpreadsheetApp.openById(id);
     if (!ss) {
-      try {
-        p.deleteProperty(DB_PROP_SHEETS_OPERATIONS_ID);
-      } catch (d) {}
       return {
         ok: true,
         data: dbMergeAnalyticsIntoPmData_({
@@ -302,9 +295,6 @@ function dbProductMappingState_() {
       })
     };
   } catch (x) {
-    try {
-      p.deleteProperty(DB_PROP_SHEETS_OPERATIONS_ID);
-    } catch (d) {}
     return {
       ok: true,
       data: dbMergeAnalyticsIntoPmData_({
