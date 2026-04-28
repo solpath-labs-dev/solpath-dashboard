@@ -550,11 +550,7 @@ export function applyAnalyticsHeaderUrls(mount, d) {
       lo.removeAttribute('href');
     }
   }
-  if (d && d.analyticsReady === true) {
-    ext.removeAttribute('hidden');
-  } else {
-    ext.setAttribute('hidden', '');
-  }
+  /* 헤더 버튼(지표 DB 초기화)은 항상 노출, 드라이브 링크만 ready일 때만 노출 */
 }
 
 /**

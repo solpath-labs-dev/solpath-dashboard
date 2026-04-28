@@ -104,7 +104,13 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
           <div class="panel panel--hero" id="sp-an-root">
             <div class="panel__head sp-an-head">
               <div class="sp-panel-eyebrow" id="sp-an-eyebrow" role="heading" aria-level="2">솔루션편입 · 매출·구매 건수</div>
-              <div class="sp-an-head__right" id="sp-an-external" hidden>
+              <div class="sp-an-head__right" id="sp-an-external">
+                <button
+                  type="button"
+                  class="btn btn--danger sp-sync-head__link sp-an-head__cta"
+                  id="sp-an-btnRebuildAnalytics"
+                  title="지표 DB를 다시 생성/연결하고, 집계 데이터를 다시 채웁니다."
+                >지표 DB 초기화</button>
                 <a
                   class="btn btn--secondary sp-sync-head__link sp-an-head__cta"
                   id="sp-an-linkSheet"
@@ -122,7 +128,6 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
               <p class="sp-pm__hint" id="sp-an-hint" hidden></p>
               <div class="sp-confirm-row">
                 <button type="button" class="btn btn--secondary" id="sp-an-btnExportBundleTop">통합 시트 저장</button>
-                <button type="button" class="btn btn--danger" id="sp-an-btnRebuildAnalytics" title="지표 DB를 다시 생성/연결하고, 집계 데이터를 다시 채웁니다.">지표 DB 초기화(재생성)</button>
               </div>
               <div class="sp-an-pillar sp-an-pillar--sales" id="sp-an-pillarSales">
                 <div class="sp-an-pillar__title" role="heading" aria-level="2">매출 현황</div>
@@ -209,10 +214,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
               </div>
               <div class="sp-pm__loading sp-an-loading" id="sp-an-loading" hidden role="status" aria-live="polite">데이터를 불러오는 중…</div>
               <div class="sp-pm-init" id="sp-an-init" hidden>
-                <p class="sp-pm-init__lede" id="sp-an-initLede">목표를 드라이브 표에 쓰려면 먼저 여기서 <strong>지표용 파일</strong>을 만듭니다. <strong>위 실적 요약</strong>은 동기화만 되어 있으면 됩니다. 문제가 생기면 이 파일을 다시 만들어 전체를 새로 시작합니다.</p>
-                <div class="sp-confirm-row sp-pm-init__row">
-                  <button type="button" class="btn btn--primary" id="sp-an-btnInit">지표용 드라이브 파일 만들기</button>
-                </div>
+                <p class="sp-pm-init__lede" id="sp-an-initLede">집계·분석(매출건수) 시트가 아직 준비되지 않았습니다. 위 <strong>「지표 DB 초기화」</strong>로 생성/재연결한 뒤 다시 확인합니다.</p>
               </div>
               <div id="sp-an-body" hidden>
                 <div class="sp-an-kpi" id="sp-an-kpi">
