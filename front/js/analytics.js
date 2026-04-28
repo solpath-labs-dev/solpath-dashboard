@@ -535,7 +535,6 @@ function fmtInt_(n) {
 export function applyAnalyticsHeaderUrls(mount, d) {
   const ext = mount.querySelector('#sp-an-external');
   const lo = /** @type {HTMLAnchorElement | null} */ (mount.querySelector('#sp-an-linkSheet'));
-  const btnR = /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnRepair'));
   if (!ext) {
     return;
   }
@@ -549,13 +548,6 @@ export function applyAnalyticsHeaderUrls(mount, d) {
     } else {
       lo.setAttribute('hidden', '');
       lo.removeAttribute('href');
-    }
-  }
-  if (btnR) {
-    if (d && d.analyticsReady === true) {
-      btnR.removeAttribute('hidden');
-    } else {
-      btnR.setAttribute('hidden', '');
     }
   }
   if (d && d.analyticsReady === true) {
@@ -721,7 +713,6 @@ export function initAnalytics(mount) {
     btnAdd: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnAdd')),
     btnSave: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnSave')),
     btnReset: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnReset')),
-    btnRepair: /** @type {HTMLButtonElement | null} */ (mount.querySelector('#sp-an-btnRepair')),
     viz: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-viz')),
     vizPeriodMeta: /** @type {HTMLElement | null} */ (mount.querySelector('#sp-an-vizPeriodMeta')),
     vizScope: /** @type {HTMLSelectElement | null} */ (mount.querySelector('#sp-an-vizScope')),
@@ -2692,9 +2683,6 @@ export function initAnalytics(mount) {
   if (el.btnReset) {
     el.btnReset.disabled = !GAS_MODE.canSync;
   }
-  if (el.btnRepair) {
-    el.btnRepair.disabled = !GAS_MODE.canSync;
-  }
 
   function validateRowInForm() {
     if (!el.inY || !el.inM || !el.inGoalTarget || !el.inAmt || !el.inCnt) {
@@ -2855,57 +2843,6 @@ export function initAnalytics(mount) {
       } finally {
         if (el.btnInit) {
           el.btnInit.disabled = false;
-        }
-      }
-    });
-  }
-
-  if (el.btnRepair) {
-    el.btnRepair.addEventListener('click', async function () {
-      if (!GAS_MODE.canSync) {
-        return;
-      }
-      if (!ready) {
-        setHint('먼저 지표용 드라이브 파일을 만든·연 뒤 다시 눌러 주세요.', true);
-        return;
-      }
-      el.btnRepair.disabled = true;
-      if (el.loading) {
-        el.loading.removeAttribute('hidden');
-      }
-      setHint('지표 시트 구조를 맞추고 주문 품목 목록을 다시 채우는 중…', true);
-      try {
-        const r = await gasJsonpWithParams(url, 'analyticsSheetsRepair', null, 120000);
-        if (!r || !r.ok) {
-          logSolpathApi_('analyticsSheetsRepair', r, null);
-          setHint(formatHintWithErrorCode_(r) || '갱신에 실패했습니다.', true);
-          return;
-        }
-        const d1 = (r && r.data) || {};
-        const wn = d1.written != null && isFinite(Number(d1.written)) ? Number(d1.written) : null;
-        setHint(
-          wn != null
-            ? '지표 시트를 맞추고 주문 품목 ' + wn + '줄을 반영했습니다.'
-            : '지표 시트를 맞추고 주문 품목 목록을 다시 채웠습니다.',
-          true
-        );
-        await loadTargets();
-        void loadFactViz_();
-      } catch (e) {
-        logSolpathApi_('analyticsSheetsRepair', null, e);
-        const m = e && e.message != null ? String(e.message) : '';
-        setHint(
-          m === 'timeout'
-            ? '응답이 지연되었습니다. 잠시 뒤 다시 시도해 주세요.'
-            : '요청이 끝나지 않았습니다. 문제가 계속되면 담당자에게 알려 주세요.',
-          true
-        );
-      } finally {
-        if (el.loading) {
-          el.loading.setAttribute('hidden', '');
-        }
-        if (el.btnRepair) {
-          el.btnRepair.disabled = !GAS_MODE.canSync;
         }
       }
     });

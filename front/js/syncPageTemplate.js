@@ -105,9 +105,6 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
             <div class="panel__head sp-an-head">
               <div class="sp-panel-eyebrow" id="sp-an-eyebrow" role="heading" aria-level="2">솔루션편입 · 매출·구매 건수</div>
               <div class="sp-an-head__right" id="sp-an-external" hidden>
-                <button type="button" class="btn btn--secondary sp-an-head__cta" id="sp-an-btnRepair" hidden>
-                  지표 시트·품목 목록 맞추기
-                </button>
                 <a
                   class="btn btn--secondary sp-sync-head__link sp-an-head__cta"
                   id="sp-an-linkSheet"
@@ -211,7 +208,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
               </div>
               <div class="sp-pm__loading sp-an-loading" id="sp-an-loading" hidden role="status" aria-live="polite">데이터를 불러오는 중…</div>
               <div class="sp-pm-init" id="sp-an-init" hidden>
-                <p class="sp-pm-init__lede" id="sp-an-initLede">목표를 드라이브 표에 쓰려면 먼저 여기서 <strong>지표용 파일</strong>을 만듭니다. <strong>위 실적 요약</strong>은 동기화만 되어 있으면 됩니다. 예전 파일만 있을 때는 파일을 연 뒤 <strong>지표 시트·품목 목록 맞추기</strong>로 구조를 맞춥니다.</p>
+                <p class="sp-pm-init__lede" id="sp-an-initLede">목표를 드라이브 표에 쓰려면 먼저 여기서 <strong>지표용 파일</strong>을 만듭니다. <strong>위 실적 요약</strong>은 동기화만 되어 있으면 됩니다. 문제가 생기면 이 파일을 다시 만들어 전체를 새로 시작합니다.</p>
                 <div class="sp-confirm-row sp-pm-init__row">
                   <button type="button" class="btn btn--primary" id="sp-an-btnInit">지표용 드라이브 파일 만들기</button>
                 </div>
