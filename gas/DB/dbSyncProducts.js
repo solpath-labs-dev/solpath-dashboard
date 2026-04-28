@@ -7,8 +7,10 @@
  */
 function dbSyncProductsOnePage() {
   var p = PropertiesService.getScriptProperties();
-  var access = p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN') != null ? String(p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN')).trim() : '';
-  if (!access.length) {
+  if (
+    p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN') == null ||
+    String(p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN')).trim() === ''
+  ) {
     throw new Error('IMWEB_OAUTH_ACCESS_TOKEN 없음. Open API 토큰·유닛 확보 후 실행.');
   }
   var uc = p.getProperty(DB_PROP_UNIT_CODE) != null ? String(p.getProperty(DB_PROP_UNIT_CODE)).trim() : '';
@@ -23,7 +25,7 @@ function dbSyncProductsOnePage() {
   var status = 'OK';
 
   try {
-    var g = imwebTGet_('/products', { page: 1, limit: 100, unitCode: uc }, access);
+    var g = imwebTGetWithOpenSyncRetry_('/products', { page: 1, limit: 100, unitCode: uc });
     if (g._http !== 200) {
       throw new Error('GET /products http=' + g._http + ' ' + String(g._text).slice(0, 500));
     }

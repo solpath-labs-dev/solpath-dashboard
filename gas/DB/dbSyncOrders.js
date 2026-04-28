@@ -10,8 +10,10 @@
 
 function dbSyncOrdersOpen() {
   var p = PropertiesService.getScriptProperties();
-  var access = p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN') != null ? String(p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN')).trim() : '';
-  if (!access.length) {
+  if (
+    p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN') == null ||
+    String(p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN')).trim() === ''
+  ) {
     throw new Error('IMWEB_OAUTH_ACCESS_TOKEN 없음.');
   }
   var uc = p.getProperty(DB_PROP_UNIT_CODE) != null ? String(p.getProperty(DB_PROP_UNIT_CODE)).trim() : '';
@@ -38,7 +40,7 @@ function dbSyncOrdersOpen() {
         Utilities.sleep(200);
       }
       var q = imwebTBuildOpenOrdersListQueryForPage_(uc, page, pageSize);
-      var g = imwebTGet_('/orders', q, access);
+      var g = imwebTGetWithOpenSyncRetry_('/orders', q);
       if (g._http !== 200) {
         throw new Error('GET /orders http=' + g._http + ' ' + String(g._text).slice(0, 400));
       }
@@ -106,7 +108,7 @@ function dbSyncOrdersOpen() {
  * @return {{ members: Object, products: Object, orders: Object }}
  */
 function dbSyncOpenAll() {
-  imwebEnsureAccessTokenForOpenSync_();
+  Logger.log('[dbSyncOpenAll] start: 선 refresh 없음, 각 API 요청에서 401/30101일 때만 refresh 후 1회 재시도');
   return {
     members: dbSyncMembersOpen(),
     products: dbSyncProductsOnePage(),

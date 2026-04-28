@@ -29,16 +29,15 @@ function dbMemberMergeGroupTitleOverrides_(map) {
 
 /**
  * `GET /member-info/groups` 전체 페이지 → `{ siteGroupCode: title, ... }`
- * @param {string} access
  * @param {string} unitCode
  * @return {Object<string, string>}
  */
-function dbMemberInfoFetchGroupCodeToTitleMap_(access, unitCode) {
+function dbMemberInfoFetchGroupCodeToTitleMap_(unitCode) {
   var map = {};
   var page = 1;
   var pageSize = 100;
   while (true) {
-    var g = imwebTGet_('/member-info/groups', { page: page, limit: pageSize, unitCode: unitCode }, access);
+    var g = imwebTGetWithOpenSyncRetry_('/member-info/groups', { page: page, limit: pageSize, unitCode: unitCode });
     if (g._http !== 200) {
       throw new Error('GET /member-info/groups http=' + g._http + ' ' + String(g._text).slice(0, 400));
     }
@@ -165,8 +164,10 @@ function dbNormalizeKrPhoneDashed_(raw) {
 
 function dbSyncMembersOpen() {
   var p = PropertiesService.getScriptProperties();
-  var access = p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN') != null ? String(p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN')).trim() : '';
-  if (!access.length) {
+  if (
+    p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN') == null ||
+    String(p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN')).trim() === ''
+  ) {
     throw new Error('IMWEB_OAUTH_ACCESS_TOKEN 없음.');
   }
   var uc = p.getProperty(DB_PROP_UNIT_CODE) != null ? String(p.getProperty(DB_PROP_UNIT_CODE)).trim() : '';
@@ -185,9 +186,9 @@ function dbSyncMembersOpen() {
   var nowIso = t0.toISOString();
 
   try {
-    var codeToTitle = dbMemberMergeGroupTitleOverrides_(dbMemberInfoFetchGroupCodeToTitleMap_(access, uc));
+    var codeToTitle = dbMemberMergeGroupTitleOverrides_(dbMemberInfoFetchGroupCodeToTitleMap_(uc));
     while (true) {
-      var g = imwebTGet_('/member-info/members', { page: page, limit: pageSize, unitCode: uc }, access);
+      var g = imwebTGetWithOpenSyncRetry_('/member-info/members', { page: page, limit: pageSize, unitCode: uc });
       if (g._http !== 200) {
         throw new Error('GET /member-info/members http=' + g._http + ' ' + String(g._text).slice(0, 400));
       }

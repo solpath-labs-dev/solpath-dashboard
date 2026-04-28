@@ -287,6 +287,73 @@ function imwebTPostForm_(url, formBody) {
   return { _http: resp.getResponseCode(), _text: text };
 }
 
+/**
+ * Open API 본문에서 statusCode/message 추출 (파싱 실패 시 null)
+ * @param {string} raw
+ * @return {{statusCode:number|null,message:string}}
+ */
+function imwebBodyMeta_(raw) {
+  var out = { statusCode: null, message: '' };
+  var j;
+  try {
+    j = JSON.parse(raw || '');
+  } catch (_e) {
+    return out;
+  }
+  if (j && j.statusCode != null && isFinite(Number(j.statusCode))) {
+    out.statusCode = Number(j.statusCode);
+  }
+  if (j && j.message != null) {
+    out.message = String(j.message);
+  }
+  return out;
+}
+
+/**
+ * access 만료/무효로 refresh가 필요한 응답인지 판정
+ * - HTTP 401 이거나
+ * - 본문 statusCode 30101 (invalid/expired access token)
+ * @param {{_http:number,_text:string}} resp
+ * @return {boolean}
+ */
+function imwebNeedsRefreshFromResponse_(resp) {
+  if (!resp) {
+    return false;
+  }
+  if (Number(resp._http) === 401) {
+    return true;
+  }
+  var meta = imwebBodyMeta_(resp._text);
+  return meta.statusCode === 30101;
+}
+
+/**
+ * refresh_token으로 access 갱신 (필요 시에만 호출)
+ * @throws {Error}
+ */
+function imwebRefreshAccessTokenForOpenSync_() {
+  var p = PropertiesService.getScriptProperties();
+  var rt = p.getProperty('IMWEB_OAUTH_REFRESH_TOKEN') != null ? String(p.getProperty('IMWEB_OAUTH_REFRESH_TOKEN')).trim() : '';
+  if (!rt.length) {
+    throw new Error('IMWEB_OAUTH_REFRESH_TOKEN 없음');
+  }
+  var b = imwebTTokenBodyRefresh_();
+  if (imwebSaveTokenResponseToProperties_(b._text) === true) {
+    Logger.log('[imwebRefreshAccessTokenForOpenSync_] refresh OK http=' + b._http);
+    return;
+  }
+  var meta = imwebBodyMeta_(b._text);
+  throw new Error(
+    'POST /oauth2/token refresh 실패' +
+      ' http=' +
+      String(b._http) +
+      ' statusCode=' +
+      String(meta.statusCode != null ? meta.statusCode : '') +
+      ' message=' +
+      String(meta.message || '')
+  );
+}
+
 function imwebTGet_(path, query, bearer) {
   var pth = path.indexOf('/') === 0 ? path : '/' + path;
   var url = imwebTestApiBase_ + pth;
@@ -311,6 +378,56 @@ function imwebTGet_(path, query, bearer) {
     t = '';
   }
   return { _http: resp.getResponseCode(), _text: t };
+}
+
+/**
+ * Open API GET with auth retry:
+ * 1) 현재 access로 1회 요청
+ * 2) 401/30101이면 refresh 후 access 재조회
+ * 3) 동일 요청 1회 재시도
+ * @param {string} path
+ * @param {Object|null|undefined} query
+ * @return {{_http:number,_text:string}}
+ */
+function imwebTGetWithOpenSyncRetry_(path, query) {
+  var p = PropertiesService.getScriptProperties();
+  var access = p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN') != null ? String(p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN')).trim() : '';
+  if (!access.length) {
+    throw new Error('IMWEB_OAUTH_ACCESS_TOKEN 없음');
+  }
+  var first = imwebTGet_(path, query, access);
+  if (!imwebNeedsRefreshFromResponse_(first)) {
+    return first;
+  }
+  var firstMeta = imwebBodyMeta_(first._text);
+  Logger.log(
+    '[imwebTGetWithOpenSyncRetry_] auth retry triggered: path=' +
+      String(path) +
+      ' http=' +
+      String(first._http) +
+      ' statusCode=' +
+      String(firstMeta.statusCode != null ? firstMeta.statusCode : '') +
+      ' message=' +
+      String(firstMeta.message || '')
+  );
+  imwebRefreshAccessTokenForOpenSync_();
+  access = p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN') != null ? String(p.getProperty('IMWEB_OAUTH_ACCESS_TOKEN')).trim() : '';
+  if (!access.length) {
+    throw new Error('refresh 후 IMWEB_OAUTH_ACCESS_TOKEN 없음');
+  }
+  var second = imwebTGet_(path, query, access);
+  var secondMeta = imwebBodyMeta_(second._text);
+  Logger.log(
+    '[imwebTGetWithOpenSyncRetry_] retry result: path=' +
+      String(path) +
+      ' http=' +
+      String(second._http) +
+      ' statusCode=' +
+      String(secondMeta.statusCode != null ? secondMeta.statusCode : '') +
+      ' message=' +
+      String(secondMeta.message || '')
+  );
+  return second;
 }
 
 /**
@@ -372,22 +489,7 @@ function imwebSaveTokenResponseToProperties_(raw) {
  * @throws {Error} refresh가 있는데 응답 저장 실패 시(만료된 refresh 등)
  */
 function imwebEnsureAccessTokenForOpenSync_() {
-  var p = PropertiesService.getScriptProperties();
-  var rt = p.getProperty('IMWEB_OAUTH_REFRESH_TOKEN') != null ? String(p.getProperty('IMWEB_OAUTH_REFRESH_TOKEN')).trim() : '';
-  if (!rt.length) {
-    Logger.log('[imwebEnsureAccessTokenForOpenSync_] refresh 없음 — 기존 access로 시도(만료면 401)');
-    return;
-  }
-  var b = imwebTTokenBodyRefresh_();
-  if (imwebSaveTokenResponseToProperties_(b._text) === true) {
-    Logger.log('[imwebEnsureAccessTokenForOpenSync_] refresh OK http=' + b._http);
-    return;
-  }
-  throw new Error(
-    'Open API access 갱신 실패(POST /oauth2/token refresh, http=' +
-      b._http +
-      '). refresh 토큰 만료 가능 — GAS **Web App 배포 URL**을 브라우저로 열어 아임웹에서 다시 승인하세요.'
-  );
+  Logger.log('[imwebEnsureAccessTokenForOpenSync_] deprecated: 선 refresh를 수행하지 않음(요청 시 401/30101일 때만 refresh)');
 }
 
 /**
