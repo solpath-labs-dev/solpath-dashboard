@@ -98,6 +98,7 @@ const btnSync = /** @type {HTMLButtonElement | null} */ (scope.querySelector('#s
 const confirmInput = /** @type {HTMLInputElement | null} */ (scope.querySelector('#sp-confirm'));
 const actionNote = /** @type {HTMLElement | null} */ (scope.querySelector('#sp-actionNote'));
 const loadingOverlay = /** @type {HTMLElement | null} */ (scope.querySelector('#sp-loadingOverlay'));
+const btnManualSync = /** @type {HTMLButtonElement | null} */ (scope.querySelector('#sp-btnManualSync'));
 const successActions = /** @type {HTMLElement | null} */ (scope.querySelector('#sp-successActions'));
 const sheetsLink = /** @type {HTMLAnchorElement | null} */ (scope.querySelector('#sp-sheetsLink'));
 const syncHeadAggregate = /** @type {HTMLAnchorElement | null} */ (scope.querySelector('#sp-syncLinkAggregate'));
@@ -278,6 +279,14 @@ function setLoading(on) {
       btnSync.setAttribute('aria-busy', 'true');
     } else {
       btnSync.removeAttribute('aria-busy');
+    }
+  }
+  if (btnManualSync) {
+    btnManualSync.disabled = on;
+    if (on) {
+      btnManualSync.setAttribute('aria-busy', 'true');
+    } else {
+      btnManualSync.removeAttribute('aria-busy');
     }
   }
 }
@@ -473,6 +482,76 @@ async function postSyncOpenFull() {
   }
 }
 
+async function postManualSync_() {
+  const url = String(GAS_BASE_URL).trim();
+  if (!url || !btnManualSync || !GAS_MODE.canSync) {
+    return;
+  }
+  const ok = window.confirm(
+    '원천 DB → 운영 DB(누락만 추가) → 집계 DB(02 재구축) 순서로 최신화합니다.\n\n' +
+      '없으면 새로 만들지 않으며, 중간에 실패하면 그 단계에서 멈춥니다.\n진행할까요?'
+  );
+  if (!ok) {
+    return;
+  }
+  setLoading(true);
+  setChip('처리', 'soft');
+  setStatus('수동 동기화 시작…');
+  setHint('');
+  try {
+    setStatus('원천 DB 동기화 중…');
+    const r1 = await gasJsonp_(url, 'syncMasterNow', 360000);
+    if (!r1 || !r1.ok) {
+      setChip('실패', 'err');
+      setStatus('원천 DB 동기화를 완료하지 못했습니다.');
+      setHint(r1 && (r1.message || (r1.error && r1.error.message) || r1.error) ? String(r1.message || (r1.error && r1.error.message) || r1.error) : '');
+      return;
+    }
+    setStatus('운영 DB 갱신 중…(누락 상품만 추가)');
+    const r2 = await gasJsonp_(url, 'operationsMappingUpsertMissing', 180000);
+    if (!r2 || !r2.ok) {
+      setChip('실패', 'err');
+      setStatus('운영 DB 갱신을 완료하지 못했습니다.');
+      setHint(r2 && (r2.message || (r2.error && r2.error.message) || r2.error) ? String(r2.message || (r2.error && r2.error.message) || r2.error) : '');
+      return;
+    }
+    setStatus('집계 DB 갱신 중…(02 재구축)');
+    const r3 = await gasJsonp_(url, 'analyticsRebuild02', 360000);
+    if (!r3 || !r3.ok) {
+      setChip('실패', 'err');
+      setStatus('집계 DB 갱신을 완료하지 못했습니다.');
+      setHint(r3 && (r3.message || (r3.error && r3.error.message) || r3.error) ? String(r3.message || (r3.error && r3.error.message) || r3.error) : '');
+      return;
+    }
+    setChip('완료', 'ok');
+    const c1 = r1 && r1.data ? r1.data : {};
+    const c2 = r2 && r2.data ? r2.data : {};
+    const c3 = r3 && r3.data ? r3.data : {};
+    setStatus(
+      '수동 동기화를 완료했습니다. (원천: 회원 ' +
+        (c1.membersRows != null ? c1.membersRows : '—') +
+        ' · 상품 ' +
+        (c1.productsRows != null ? c1.productsRows : '—') +
+        ' · 주문 ' +
+        (c1.ordersRows != null ? c1.ordersRows : '—') +
+        ' · 품목 ' +
+        (c1.itemsRows != null ? c1.itemsRows : '—') +
+        ') (운영: 추가 ' +
+        (c2.inserted != null ? c2.inserted : '—') +
+        ') (집계02: 기록 ' +
+        (c3.written != null ? c3.written : '—') +
+        ')'
+    );
+    setHint('');
+  } catch (e) {
+    setChip('오류', 'err');
+    setStatus('수동 동기화 요청이 완료되지 않았습니다.');
+    setHint(e && e.message != null ? String(e.message) : '');
+  } finally {
+    setLoading(false);
+  }
+}
+
 function wireSync() {
   if (!btnSync) {
     return;
@@ -505,6 +584,20 @@ function wireSync() {
   });
 }
 
+function wireManualSync_() {
+  if (!btnManualSync) {
+    return;
+  }
+  if (!GAS_MODE.canSync || GAS_MODE.useMock) {
+    btnManualSync.disabled = true;
+    return;
+  }
+  btnManualSync.disabled = false;
+  btnManualSync.addEventListener('click', function () {
+    postManualSync_();
+  });
+}
+
 async function main() {
   if (!mount) {
     setChip('오류', 'err');
@@ -526,6 +619,7 @@ async function main() {
   setStatus('');
   setHint('');
   wireSync();
+  wireManualSync_();
   try {
     const url = String(GAS_BASE_URL).trim();
     const st = await gasJsonp_(url, 'productMappingState', 60000);

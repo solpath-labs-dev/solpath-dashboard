@@ -897,6 +897,21 @@ function dbAnalyticsResetAll_() {
 }
 
 /**
+ * 집계 DB(매출건수)에서 `02_주문라인_실적`만 최신화(전면 재구축).
+ * - 없으면 생성하지 않고 실패 반환
+ * - `01_연월_목표`는 건드리지 않음(프론트에서 직접 입력)
+ * @return {{ ok: true, data: { written: number, excluded: number, batchId: string } }|{ ok: false, error: { code: string, message: string } }}
+ */
+function dbAnalyticsRebuild02FromMaster_() {
+  try {
+    dbAnOpenOrThrow_();
+  } catch (e0) {
+    return { ok: false, error: { code: 'NO_ANALYTICS_SHEET', message: '집계·분석 시트가 없습니다. (없으면 생성하지 않습니다)' } };
+  }
+  return dbAnalyticsOrderLinesRebuildFromMaster_();
+}
+
+/**
  * 주문(연,월)이 (a,b) **이전**이면 true — add_time **시작월** 미만
  * @param {number} oy
  * @param {number} om

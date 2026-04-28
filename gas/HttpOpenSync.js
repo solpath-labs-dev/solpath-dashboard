@@ -92,12 +92,15 @@ function openSyncAllowedActions_() {
   return [
     'ping',
     'syncOpenFull',
+    'syncMasterNow',
     'productMappingState',
     'productMappingList',
     'initOperationsSheets',
+    'operationsMappingUpsertMissing',
     'productMappingApply',
     'productMappingReset',
     'initAnalyticsSheets',
+    'analyticsRebuild02',
     'analyticsTargetsGet',
     'analyticsTargetsApply',
     'analyticsTableExport',
@@ -132,6 +135,25 @@ function openSyncRouteAction_(action, e) {
       };
     }
   }
+  if (action === 'syncMasterNow') {
+    try {
+      var dataM = dbSyncOpenAll();
+      return {
+        ok: true,
+        data: {
+          membersRows: dataM && dataM.members && dataM.members.rows != null ? dataM.members.rows : null,
+          productsRows: dataM && dataM.products && dataM.products.rows != null ? dataM.products.rows : null,
+          ordersRows: dataM && dataM.orders && dataM.orders.orderRows != null ? dataM.orders.orderRows : null,
+          itemsRows: dataM && dataM.orders && dataM.orders.itemRows != null ? dataM.orders.itemRows : null
+        }
+      };
+    } catch (xM) {
+      return {
+        ok: false,
+        error: { code: 'SYNC_FAILED', message: xM && xM.message != null ? String(xM.message) : String(xM) }
+      };
+    }
+  }
   if (action === 'productMappingState') {
     return dbProductMappingState_();
   }
@@ -154,6 +176,9 @@ function openSyncRouteAction_(action, e) {
         seededRowCount: r0.seededRowCount != null ? r0.seededRowCount : 0
       }
     };
+  }
+  if (action === 'operationsMappingUpsertMissing') {
+    return dbPmUpsertMissingProductsIntoMapping_();
   }
   if (action === 'productMappingApply') {
     var rows0 = openSyncExtractRowsForApply_(e);
@@ -179,6 +204,9 @@ function openSyncRouteAction_(action, e) {
         createdNew: rAn.createdNew
       }
     };
+  }
+  if (action === 'analyticsRebuild02') {
+    return dbAnalyticsRebuild02FromMaster_();
   }
   if (action === 'analyticsTargetsGet') {
     return dbAnalyticsTargetsRead_();

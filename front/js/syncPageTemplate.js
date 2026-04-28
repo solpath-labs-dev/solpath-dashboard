@@ -10,6 +10,14 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
             <p class="sp-cdn-build" id="sp-cdnBuild" title="" hidden aria-label="화면 버전 표시. 임웹 스니펫과 같은 배포인지 확인할 때 참고"></p>
           </div>
         </div>
+        <div class="app-header__right">
+          <button
+            type="button"
+            class="btn btn--secondary"
+            id="sp-btnManualSync"
+            title="원천 DB → 운영 DB(누락만 추가) → 집계 DB(02 재구축) 순서로 최신화합니다. (없으면 생성하지 않습니다)"
+          >수동 동기화</button>
+        </div>
         <div class="sp-intro-wrap">
           <div class="sp-intro-card sp-intro-card--an" id="sp-introAn" aria-hidden="false">
             <p class="sp-intro-title">매출·구매 건수 지표 · 사용 안내</p>

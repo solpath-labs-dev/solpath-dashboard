@@ -473,6 +473,82 @@ function dbPmReadMappingMap_() {
 }
 
 /**
+ * 원천 `products` 기준으로 운영 `product_mapping`에 **없는 prod_no만** 추가한다.
+ * - 기존 행(분류/상태/메모)은 절대 건드리지 않음
+ * - 운영 DB가 없으면 생성하지 않고 실패 반환
+ * @return {{ ok: true, data: { inserted: number, totalProducts: number } }|{ ok: false, error: { code: string, message: string } }}
+ */
+function dbPmUpsertMissingProductsIntoMapping_() {
+  var master;
+  try {
+    master = dbOpenMaster_();
+  } catch (e0) {
+    return { ok: false, error: { code: 'NO_SHEETS_MASTER', message: e0 && e0.message != null ? String(e0.message) : String(e0) } };
+  }
+  var ssOps;
+  try {
+    ssOps = dbPmOpenOpsOrThrow_();
+  } catch (e1) {
+    return { ok: false, error: { code: 'NO_OPERATIONS_SHEET', message: '운영 DB(SHEETS_OPERATIONS_ID)가 없습니다.' } };
+  }
+  var ps = master.getSheetByName(DB_SHEET_PRODUCTS);
+  if (!ps || ps.getLastRow() < 2) {
+    return { ok: true, data: { inserted: 0, totalProducts: 0 } };
+  }
+  var lr = ps.getLastRow();
+  var nColsP = DB_PRODUCTS_HEADERS.length;
+  var pVals = ps.getRange(2, 1, lr - 1, nColsP).getValues();
+  var sh = dbGetOrCreateSheetWithHeaders_(ssOps, DB_SHEET_PRODUCT_MAPPING, DB_PRODUCT_MAPPING_HEADERS);
+  var nColsM = DB_PRODUCT_MAPPING_HEADERS.length;
+  var existing = {};
+  var mr = sh.getLastRow();
+  if (mr >= 2) {
+    var aVals = sh.getRange(2, 1, mr - 1, 1).getValues();
+    var ai;
+    for (ai = 0; ai < aVals.length; ai++) {
+      var k0 = dbPmRowKey_(aVals[ai] != null && aVals[ai].length ? aVals[ai][0] : aVals[ai]);
+      if (k0) {
+        existing[k0] = 1;
+      }
+    }
+  }
+  var idxProdNo = 0;
+  var idxName = 3;
+  var now = new Date().toISOString();
+  var out = [];
+  var i;
+  for (i = 0; i < pVals.length; i++) {
+    var line = pVals[i] || [];
+    var pk = dbPmRowKey_(line[idxProdNo]);
+    if (!pk) {
+      continue;
+    }
+    if (existing[pk]) {
+      continue;
+    }
+    var prodNo = parseInt(line[idxProdNo], 10);
+    if (isNaN(prodNo)) {
+      continue;
+    }
+    var fromProductsName = String(line[idxName] != null ? line[idxName] : '').trim();
+    out.push([prodNo, fromProductsName, _DB_PM_DEFAULT_INTERNAL, _DB_PM_DEFAULT_LIFECYCLE, now, now, '', '']);
+    existing[pk] = 1;
+  }
+  if (!out.length) {
+    return { ok: true, data: { inserted: 0, totalProducts: pVals.length } };
+  }
+  var startRow = sh.getLastRow() + 1;
+  var chunk = 2000;
+  var inserted = 0;
+  for (i = 0; i < out.length; i += chunk) {
+    var slice = out.slice(i, i + chunk);
+    sh.getRange(startRow + i, 1, slice.length, nColsM).setValues(slice);
+    inserted += slice.length;
+  }
+  return { ok: true, data: { inserted: inserted, totalProducts: pVals.length } };
+}
+
+/**
  * @param {string} s
  * @return {string}
  */
