@@ -2023,10 +2023,7 @@ export function initAnalytics(mount) {
     }
     const skipBusy = skipBusyOverlay === true;
     if (!skipBusy) {
-      showAnBusyOverlay_(
-        '표 준비 중',
-        '구매 건수 표와 연도별 합계를 불러옵니다. 잠시만 기다려 주세요.'
-      );
+      showAnBusyOverlay_('데이터를 불러오는중입니다', '잠시만 기다려 주세요.');
     }
     el.people.removeAttribute('hidden');
     if (el.peopleWarn) {
@@ -2471,10 +2468,7 @@ export function initAnalytics(mount) {
       el.viz.removeAttribute('hidden');
     }
     const base = String(GAS_BASE_URL).trim();
-    showAnBusyOverlay_(
-      '불러오는 중',
-      '매출과 구매 건수를 가져옵니다. 잠시만 기다려 주세요.'
-    );
+    showAnBusyOverlay_('데이터를 불러오는중입니다', '잠시만 기다려 주세요.');
     try {
       const r = await gasJsonpWithParams(
         base,

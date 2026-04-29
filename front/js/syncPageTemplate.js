@@ -105,9 +105,9 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
         </div>
         <div class="sp-overlay sp-an-busy-overlay" id="sp-an-loadingOverlay" hidden aria-hidden="true">
           <div class="sp-overlay-box">
-            <div class="sp-spinner" role="status" aria-label="불러오는 중"></div>
-            <p class="sp-overlay-text" id="sp-an-loadingOverlay-title">불러오는 중</p>
-            <p class="sp-overlay-sub" id="sp-an-loadingOverlay-desc">매출·구매 건수 표를 준비합니다. 잠시만 기다려 주세요.</p>
+            <div class="sp-spinner" role="status" aria-label="데이터를 불러오는중입니다"></div>
+            <p class="sp-overlay-text" id="sp-an-loadingOverlay-title">데이터를 불러오는중입니다</p>
+            <p class="sp-overlay-sub" id="sp-an-loadingOverlay-desc">잠시만 기다려 주세요.</p>
           </div>
         </div>
 
