@@ -1646,7 +1646,32 @@ export function initAnalytics(mount) {
       : '이 달 순매출 누적 합계(말일 기준과 같음)';
 
     const scp0 = (el.vizScope && el.vizScope.value) || 'entire';
-    const names = (report && report.prodNameByNo) || {};
+    const names = /** @type {Record<string, string>} */ ({});
+    const repNames = (report && report.prodNameByNo) || {};
+    let nk0;
+    for (nk0 in repNames) {
+      if (Object.prototype.hasOwnProperty.call(repNames, nk0)) {
+        names[nk0] = String(repNames[nk0] != null ? repNames[nk0] : '');
+      }
+    }
+    if (_pmRows && _pmRows.length) {
+      for (let ni = 0; ni < _pmRows.length; ni++) {
+        const pm0 = _pmRows[ni] || {};
+        const pno0 = pm0.prod_no != null ? String(pm0.prod_no).trim() : '';
+        if (!pno0.length) {
+          continue;
+        }
+        const nm0 =
+          pm0.product_name != null
+            ? String(pm0.product_name).trim()
+            : pm0.name != null
+              ? String(pm0.name).trim()
+              : '';
+        if (nm0.length) {
+          names[pno0] = nm0;
+        }
+      }
+    }
     const fr = factRows != null && factRows.length ? factRows : [];
     const aggP = fr.length ? aggregateFactRows(fr, y, m) : { byDayCat: {}, byDayProd: {} };
     const bdp = aggP.byDayProd != null ? aggP.byDayProd : {};
