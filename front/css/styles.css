@@ -742,6 +742,8 @@ a.sp-an-head__cta.sp-sync-head__link:hover {
   color: #1a2430;
 }
 .sp-an-viz-table th.sp-an-viz__row-h,
+.sp-an-viz-table th.sp-an-viz__row-lbl,
+.sp-an-viz-table tbody th[scope='row'],
 .sp-an-viz-table td.sp-an-viz__row-lbl {
   position: sticky;
   left: 0;
@@ -754,6 +756,8 @@ a.sp-an-head__cta.sp-sync-head__link:hover {
   background: #f4f6f8;
   border-right: 1px solid #8a96a5;
 }
+.sp-an-viz-table tbody th.sp-an-viz__row-lbl,
+.sp-an-viz-table tbody th[scope='row'],
 .sp-an-viz-table tbody td.sp-an-viz__row-lbl {
   font-size: calc(0.62rem + var(--sp-text-bump));
 }
