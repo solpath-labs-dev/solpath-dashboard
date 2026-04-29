@@ -8,7 +8,8 @@ import {
   daysInMonth,
   firstDomCalendarWeekInMonth,
   lastDomCalendarWeekInMonth,
-  lineCountsByMonthCategoryYear
+  lineCountsByMonthCategoryYear,
+  refundLineCountsByMonthYear
 } from './analyticsVizModule.js';
 
 /** 실적 목표 표·시트 `goal_target` — 일별 매출 보기 범위와 동일한 네 가지 + 전체 */
@@ -1929,6 +1930,10 @@ export function initAnalytics(mount) {
         _peopleYearRows && _peopleYearRows.length
           ? lineCountsByMonthCategoryYear(_peopleYearRows, useY)
           : {};
+      const refundByM =
+        _peopleYearRows && _peopleYearRows.length
+          ? refundLineCountsByMonthYear(_peopleYearRows, useY)
+          : {};
       const co0 = _vizReport && _vizReport.categoryOrder ? _vizReport.categoryOrder : [];
       const ordC = co0 && co0.length ? co0 : Object.keys(AN_CATEGORY_KEY_LABEL);
       let tHH = '<tr><th class="sp-an-viz__row-h" scope="col">상품군</th>';
@@ -1968,10 +1973,22 @@ export function initAnalytics(mount) {
           fmtInt_(rTot) +
           '</td></tr>';
       }
+      let refundYearTotal = 0;
+      tBB += '<tr class="sp-an-people__sumrow"><th scope="row">환불 건수 총합</th>';
+      for (mc = 1; mc <= 12; mc++) {
+        if (useY > yNow0 || (useY === yNow0 && mc > mNow0)) {
+          tBB += '<td class="sp-an-people__dash">–</td>';
+          continue;
+        }
+        const rv = (refundByM[mc] != null ? Number(refundByM[mc]) : 0);
+        refundYearTotal += rv;
+        tBB += '<td>' + fmtInt_(rv) + '</td>';
+      }
+      tBB += '<td class="sp-an-viz__sum-col">' + fmtInt_(refundYearTotal) + '</td></tr>';
       el.peopleMatrix.innerHTML =
         '<p class="sp-an-viz__empty sp-an-people-matrix__caption">' +
         esc(String(useY)) +
-        '년 1~12월 구매 건수(상품군·월별 합, 상품군 미정은 제외). 아직 지나지 않은 달은 비웁니다.</p>' +
+        '년 1~12월 구매 건수(상품군·월별 합, 상품군 미정은 제외)와 환불 건수 총합입니다. 아직 지나지 않은 달은 비웁니다.</p>' +
         '<table class="sp-an-viz-table sp-an-people__matrix"><thead>' +
         tHH +
         '</thead><tbody>' +
@@ -2038,7 +2055,7 @@ export function initAnalytics(mount) {
         useY +
         '년 ' +
         useM +
-        '월 — 날짜별 구매 건수입니다. <strong>품목 분류</strong>에서 <strong>지금 판매 중(진행)</strong>으로 두었고, 이 달과 판매 기간이 겹치는 품목만 보입니다(상품군 미정·판매 종료·시험용·옛 상품 제외). 교재는 「교재」 한 줄로 합칩니다. 아래에 같은 연도 기준 월×상품군 합계가 함께 표시됩니다.';
+        '월 — 날짜별 구매 건수입니다. <strong>품목 분류</strong>에서 <strong>지금 판매 중(진행)</strong>으로 두었고, 이 달과 판매 기간이 겹치는 품목만 보입니다(상품군 미정·판매 종료·시험용·옛 상품 제외). 교재는 「교재」 한 줄로 합칩니다. 맨아래에 날짜별 <strong>환불 건수 총합</strong>을 같이 보여 줍니다.';
     }
     if (el.peopleGrid) {
       el.peopleGrid.innerHTML = '<p class="sp-an-viz__empty">불러오는 중…</p>';
@@ -2344,8 +2361,35 @@ export function initAnalytics(mount) {
         '">' +
         fmtInt_(ssum) +
         '</td></tr>';
+      let refundSumB =
+        '<tr class="sp-an-people__sumrow"><th scope="row" title="상품 구분 없이 그날 발생한 환불 건수 합계">환불 건수 총합</th>';
+      let refundMonthTotal = 0;
+      for (let d2 = 1; d2 <= daysN2; d2++) {
+        const mma3 = useM < 10 ? '0' + useM : String(useM);
+        const ddc = d2 < 10 ? '0' + d2 : String(d2);
+        const ymdC = useY + '-' + mma3 + '-' + ddc;
+        const blkR = bdpG[ymdC] || {};
+        let rsum = 0;
+        for (const q in blkR) {
+          if (Object.prototype.hasOwnProperty.call(blkR, q)) {
+            rsum += blkR[q] && blkR[q].refundLines != null ? Number(blkR[q].refundLines) : 0;
+          }
+        }
+        refundMonthTotal += rsum;
+        refundSumB += '<td>' + fmtInt_(rsum) + '</td>';
+      }
+      for (let ck0 = 0; ck0 < uniqueCats.length; ck0++) {
+        const cmod4 = ck0 % 3;
+        refundSumB +=
+          '<td class="sp-an-viz__sum-col sp-an-people__col--cat sp-an-people__col--c' +
+          cmod4 +
+          ' sp-an-people__row-cat-na" title="환불 건수 총합은 상품 구분 없이 집계">' +
+          '—' +
+          '</td>';
+      }
+      refundSumB += '<td class="sp-an-viz__sum-col sp-an-people__col--tot">' + fmtInt_(refundMonthTotal) + '</td></tr>';
       if (el.peopleGrid) {
-        el.peopleGrid.innerHTML = '<table class="sp-an-viz-table sp-an-people__grid">' + theg + tbG + sumB + '</table>';
+        el.peopleGrid.innerHTML = '<table class="sp-an-viz-table sp-an-people__grid">' + theg + tbG + sumB + refundSumB + '</table>';
       }
 
       await loadPeopleYearMatrix_(base, useY);

@@ -5,6 +5,7 @@
 export const AN_FACT = {
   SALES: 'sales_amount',
   REFUND: 'refund_amount',
+  REFUND_LINES: 'refund_line_count',
   LINES: 'line_count',
   UM: 'unique_members',
   UMC: 'unique_members_month_category'
@@ -46,7 +47,7 @@ export function aggregateFactRows(rows, y, m) {
       byDayCat[d] = {};
     }
     if (!byDayCat[d][cat]) {
-      byDayCat[d][cat] = { sales: 0, refund: 0, lines: 0 };
+      byDayCat[d][cat] = { sales: 0, refund: 0, lines: 0, refundLines: 0 };
     }
     const pk = pno.length ? cat + '\t' + pno : null;
     if (pk) {
@@ -54,7 +55,7 @@ export function aggregateFactRows(rows, y, m) {
         byDayProd[d] = {};
       }
       if (!byDayProd[d][pk]) {
-        byDayProd[d][pk] = { sales: 0, refund: 0, lines: 0 };
+        byDayProd[d][pk] = { sales: 0, refund: 0, lines: 0, refundLines: 0 };
       }
     }
     if (met === AN_FACT.SALES) {
@@ -71,6 +72,11 @@ export function aggregateFactRows(rows, y, m) {
       byDayCat[d][cat].lines += v0;
       if (pk) {
         byDayProd[d][pk].lines += v0;
+      }
+    } else if (met === AN_FACT.REFUND_LINES) {
+      byDayCat[d][cat].refundLines += v0;
+      if (pk) {
+        byDayProd[d][pk].refundLines += v0;
       }
     }
   }
@@ -118,6 +124,36 @@ export function lineCountsByMonthCategoryYear(rows, y) {
     o[mo][cat] += v0;
   }
   return o;
+}
+
+/**
+ * @param {Object[]} rows `analyticsFactRowsGet(y,0)` 권장 — 월(1~12)별 전체 환불 건수(상품 무관)
+ * @param {number} y
+ * @return {Record<number, number>}
+ */
+export function refundLineCountsByMonthYear(rows, y) {
+  const out = {};
+  for (let mi = 1; mi <= 12; mi++) {
+    out[mi] = 0;
+  }
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i] || {};
+    if (String(r.metric) !== AN_FACT.REFUND_LINES) {
+      continue;
+    }
+    const d = String(r.date_ymd != null ? r.date_ymd : '');
+    const pr = d.split('-');
+    if (pr.length < 2 || parseInt(pr[0], 10) !== y) {
+      continue;
+    }
+    const mo = parseInt(pr[1], 10);
+    if (mo < 1 || mo > 12) {
+      continue;
+    }
+    const v = Number(r.value);
+    out[mo] += isFinite(v) ? v : 0;
+  }
+  return out;
 }
 
 /**

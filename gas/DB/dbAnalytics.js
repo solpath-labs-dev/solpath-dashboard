@@ -1283,6 +1283,7 @@ function dbAnalyticsMasterActualsGet_(y, m, scope) {
 var DB_AN_FACT_SALES = 'sales_amount';
 var DB_AN_FACT_REFUND = 'refund_amount';
 var DB_AN_FACT_LINES = 'line_count';
+var DB_AN_FACT_REFUND_LINES = 'refund_line_count';
 var DB_AN_FACT_UM = 'unique_members';
 /** 분류(대분류)별 그 달 **고유** 구매자 수 — 일별 `um` 합이 아님 */
 var DB_AN_FACT_UM_MONTH_CAT = 'unique_members_month_category';
@@ -1626,6 +1627,9 @@ function dbAnVirtualFactRowsFromOrderLines_(y, m) {
     }
     if (fb.refund > 0) {
       addAgg(fb.ymd, fb.cat, fb.pno, DB_AN_FACT_REFUND, fb.refund);
+    }
+    if (fb.linesNeg > 0) {
+      addAgg(fb.ymd, fb.cat, fb.pno, DB_AN_FACT_REFUND_LINES, fb.linesNeg);
     }
     var lineAdj2 = fb.linesPos - fb.linesNeg;
     if (lineAdj2 !== 0) {
