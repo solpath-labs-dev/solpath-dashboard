@@ -744,6 +744,8 @@ export function initAnalytics(mount) {
   let _vizRows = /** @type {Object[]|null} */ (null);
   let _vizY = 0;
   let _vizM = 0;
+  /** @type {Object[]|null} 상품 목록 캐시(productMappingList) */
+  let _pmRows = null;
   let _peopleYearRows = /** @type {Object[]|null} */ (null);
   let _peopleY = 0;
   /** @type {{ y: number, m: number, d: Record<string, unknown> } | null} */
@@ -798,6 +800,26 @@ export function initAnalytics(mount) {
     } else {
       el.btnKpiAnnual.classList.remove('is-active');
       el.btnKpiAnnual.setAttribute('aria-pressed', 'false');
+    }
+  }
+
+  /**
+   * 상세 상품 행 후보(0값 포함)를 만들기 위한 product_mapping 캐시 보장.
+   * 실패해도 화면은 fact 기반 fallback으로 계속 동작한다.
+   * @return {Promise<void>}
+   */
+  async function ensureProductMappingRows_() {
+    if (_pmRows && _pmRows.length) {
+      return;
+    }
+    if (!GAS_MODE.canSync || GAS_MODE.useMock) {
+      return;
+    }
+    try {
+      const rPm = await gasJsonpWithParams(url, 'productMappingList', {}, 120000);
+      _pmRows = rPm && rPm.ok && rPm.data && Array.isArray(rPm.data.rows) ? rPm.data.rows : [];
+    } catch (_ePm) {
+      _pmRows = [];
     }
   }
 
@@ -1691,13 +1713,42 @@ export function initAnalytics(mount) {
       oneCatRow_(scp0);
     } else {
       const pset = /** @type {Record<string, boolean>} */ ({});
-      for (ci = 0; ci < colN; ci++) {
-        const ymdX = ymdSeq[ci];
-        const bmap = bdp[ymdX] || {};
-        var kyx;
-        for (kyx in bmap) {
-          if (Object.prototype.hasOwnProperty.call(bmap, kyx) && String(kyx).indexOf(scp0 + '\t') === 0) {
-            pset[kyx] = true;
+      /** @type {Record<string, { addYmd: string, endYmd: string }>} */
+      const pWindow = {};
+      if (_pmRows && _pmRows.length) {
+        for (let pi = 0; pi < _pmRows.length; pi++) {
+          const pm = _pmRows[pi] || {};
+          const pno = pm.prod_no != null ? String(pm.prod_no).trim() : '';
+          if (!pno.length) {
+            continue;
+          }
+          const cat = pm.internal_category != null ? String(pm.internal_category).trim() : '';
+          if (cat !== scp0) {
+            continue;
+          }
+          const life = pm.lifecycle != null ? String(pm.lifecycle).trim().toLowerCase() : '';
+          if (life !== 'active') {
+            continue;
+          }
+          const addYmd = pm.add_time_ymd != null ? String(pm.add_time_ymd).trim().slice(0, 10) : '';
+          const endYmd = pm.sales_end != null ? String(pm.sales_end).trim().slice(0, 10) : '';
+          if (m >= 1 && m <= 12 && !productSaleWindowOverlapsMonth_(addYmd, endYmd, y, m)) {
+            continue;
+          }
+          const key = scp0 + '\t' + pno;
+          pset[key] = true;
+          pWindow[key] = { addYmd: addYmd, endYmd: endYmd };
+        }
+      }
+      if (!Object.keys(pset).length) {
+        for (ci = 0; ci < colN; ci++) {
+          const ymdX = ymdSeq[ci];
+          const bmap = bdp[ymdX] || {};
+          var kyx;
+          for (kyx in bmap) {
+            if (Object.prototype.hasOwnProperty.call(bmap, kyx) && String(kyx).indexOf(scp0 + '\t') === 0) {
+              pset[kyx] = true;
+            }
           }
         }
       }
@@ -1711,9 +1762,15 @@ export function initAnalytics(mount) {
         let tdsP = '';
         for (ci = 0; ci < colN; ci++) {
           const ymdP = ymdSeq[ci];
+          const win = pWindow[kpk];
+          const addY = win && win.addYmd ? win.addYmd : '';
+          const endY = win && win.endYmd ? win.endYmd : '';
+          const outOfWindow = m === 0 && ((addY && ymdP < addY) || (endY && ymdP > endY));
           const slP = bdp[ymdP] && bdp[ymdP][kpk] ? bdp[ymdP][kpk] : null;
           const sP = slP && slP.sales != null ? Number(slP.sales) : 0;
           if (colExcluded[ci]) {
+            tdsP += '<td class="sp-an-viz__cell-na">—</td>';
+          } else if (outOfWindow) {
             tdsP += '<td class="sp-an-viz__cell-na">—</td>';
           } else {
             rowSumP += sP;
@@ -1969,6 +2026,25 @@ export function initAnalytics(mount) {
           fmtInt_(rTot) +
           '</td></tr>';
       }
+      let monthGrandTotal = 0;
+      tBB += '<tr class="sp-an-people__sumrow"><th scope="row">월별 총합</th>';
+      for (mc = 1; mc <= 12; mc++) {
+        if (useY > yNow0 || (useY === yNow0 && mc > mNow0)) {
+          tBB += '<td class="sp-an-people__dash">–</td>';
+          continue;
+        }
+        let mv = 0;
+        for (let oi1 = 0; oi1 < ordC.length; oi1++) {
+          const cat1 = String(ordC[oi1]);
+          if (cat1 === 'unmapped') {
+            continue;
+          }
+          mv += (byMC[mc] && byMC[mc][cat1]) != null ? Number(byMC[mc][cat1]) : 0;
+        }
+        monthGrandTotal += mv;
+        tBB += '<td>' + fmtInt_(mv) + '</td>';
+      }
+      tBB += '<td class="sp-an-viz__sum-col">' + fmtInt_(monthGrandTotal) + '</td></tr>';
       let refundYearTotal = 0;
       tBB += '<tr class="sp-an-people__sumrow"><th scope="row">환불 건수 총합</th>';
       for (mc = 1; mc <= 12; mc++) {
@@ -2468,6 +2544,7 @@ export function initAnalytics(mount) {
     const base = String(GAS_BASE_URL).trim();
     showAnBusyOverlay_('데이터를 불러오는중입니다', '잠시만 기다려 주세요.');
     try {
+      await ensureProductMappingRows_();
       const r = await gasJsonpWithParams(
         base,
         'analyticsFactReport',
