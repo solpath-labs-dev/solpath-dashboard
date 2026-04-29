@@ -1752,7 +1752,7 @@ export function initAnalytics(mount) {
             continue;
           }
           const life = pm.lifecycle != null ? String(pm.lifecycle).trim().toLowerCase() : '';
-          if (life !== 'active') {
+          if (life === 'test') {
             continue;
           }
           const addYmd = pm.add_time_ymd != null ? String(pm.add_time_ymd).trim().slice(0, 10) : '';
@@ -2149,7 +2149,7 @@ export function initAnalytics(mount) {
         useY +
         '년 ' +
         useM +
-        '월 — 날짜별 구매 건수입니다. <strong>품목 분류</strong>에서 <strong>지금 판매 중(진행)</strong>으로 두었고, 이 달과 판매 기간이 겹치는 품목만 보입니다(상품군 미정·판매 종료·시험용·옛 상품 제외). 교재는 「교재」 한 줄로 합칩니다. 맨아래에 날짜별 <strong>환불 건수 총합</strong>을 같이 보여 줍니다.';
+        '월 — 날짜별 구매 건수입니다. 이 달과 판매 기간이 겹치는 품목만 보이며, <strong>test</strong>·상품군 미정 품목은 제외합니다(legacy 포함). 교재는 「교재」 한 줄로 합칩니다. 맨아래에 날짜별 <strong>환불 건수 총합</strong>을 같이 보여 줍니다.';
     }
     if (el.peopleGrid) {
       el.peopleGrid.innerHTML = '<p class="sp-an-viz__empty">불러오는 중…</p>';
@@ -2203,8 +2203,8 @@ export function initAnalytics(mount) {
               continue;
             }
             const lifeM = String(pr.lifecycle != null ? pr.lifecycle : '').trim().toLowerCase();
-            /* 구매 건수 표: 진행(active)만 — 만료·시험용·옛 상품 제외 */
-            if (lifeM !== 'active') {
+            /* 구매 건수 표: test만 제외 (active/legacy 포함), 판매기간으로 월 노출 제어 */
+            if (lifeM === 'test') {
               continue;
             }
             if (
@@ -2613,7 +2613,10 @@ export function initAnalytics(mount) {
         buildVizScopeOptions_(ord);
         renderVizAll_(d0, rowList, ym.y, ym.m);
       }
-      await loadPeopleViz_(base, ym.y, ym.m, rowList, true, true);
+      const pmCur = el.peopleM && el.peopleM.value ? parseInt(String(el.peopleM.value), 10) : NaN;
+      const peopleMonth = ym.m >= 1 && ym.m <= 12 ? ym.m : isFinite(pmCur) && pmCur >= 1 && pmCur <= 12 ? pmCur : new Date().getMonth() + 1;
+      const alignPeople = ym.m >= 1 && ym.m <= 12;
+      await loadPeopleViz_(base, ym.y, peopleMonth, rowList, alignPeople, true);
     } catch (e) {
       if (el.viz) {
         if (el.vizScroll) {
