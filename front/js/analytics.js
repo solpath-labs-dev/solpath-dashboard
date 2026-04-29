@@ -1956,9 +1956,17 @@ export function initAnalytics(mount) {
           }
           const cell0 = (byMC[mc] && byMC[mc][cname]) != null ? Number(byMC[mc][cname]) : 0;
           rTot += cell0;
-          tBB += '<td>' + (cell0 ? fmtInt_(cell0) : '0') + '</td>';
+          const v0 = Number(cell0);
+          const neg0 = isFinite(v0) && v0 < 0;
+          const t0 = !isFinite(v0) || v0 === 0 ? '0' : fmtInt_(v0);
+          tBB += '<td' + (neg0 ? ' class="sp-an-viz__cell-num-neg"' : '') + '>' + t0 + '</td>';
         }
-        tBB += '<td class="sp-an-viz__sum-col">' + fmtInt_(rTot) + '</td></tr>';
+        tBB +=
+          '<td class="sp-an-viz__sum-col' +
+          (rTot < 0 ? ' sp-an-viz__cell-num-neg' : '') +
+          '">' +
+          fmtInt_(rTot) +
+          '</td></tr>';
       }
       el.peopleMatrix.innerHTML =
         '<p class="sp-an-viz__empty sp-an-people-matrix__caption">' +
@@ -2014,6 +2022,17 @@ export function initAnalytics(mount) {
     const pm0 = el.peopleM != null && el.peopleM.value ? parseInt(el.peopleM.value, 10) : m;
     const useY = isFinite(py0) ? py0 : y;
     const useM = isFinite(pm0) && pm0 >= 1 && pm0 <= 12 ? pm0 : m;
+    /**
+     * 구매 건수 칸(일별). 0은 "0", 음수는 붉은 배경(환불 등 순감).
+     * @param {number} n
+     * @return {string}
+     */
+    function peopleCountTdHtml_(n) {
+      const v = Number(n);
+      const isNeg = isFinite(v) && v < 0;
+      const text = !isFinite(v) || v === 0 ? '0' : fmtInt_(v);
+      return '<td' + (isNeg ? ' class="sp-an-viz__cell-num-neg"' : '') + '>' + text + '</td>';
+    }
     if (el.peopleLede) {
       el.peopleLede.innerHTML =
         useY +
@@ -2241,7 +2260,7 @@ export function initAnalytics(mount) {
             nL = h && h.lines != null ? Number(h.lines) : 0;
           }
           rs += nL;
-          tdDays += '<td>' + (nL ? fmtInt_(nL) : '0') + '</td>';
+          tdDays += peopleCountTdHtml_(nL);
         }
         rowItems.push({ catRow: catRow, lab1: lab1, rs: rs, tdDays: tdDays });
       }
@@ -2269,14 +2288,21 @@ export function initAnalytics(mount) {
             tdG +=
               '<td class="' +
               baseCls +
-              ' sp-an-people__cat-merge" rowspan="' +
+              ' sp-an-people__cat-merge' +
+              (runSum < 0 ? ' sp-an-viz__cell-num-neg' : '') +
+              '" rowspan="' +
               runLen +
               '" title="같은 상품군(연속 행) 이 달 구매 합(건)">' +
               fmtInt_(runSum) +
               '</td>';
           }
         }
-        tdG += '<td class="sp-an-viz__sum-col sp-an-people__col--tot">' + fmtInt_(R.rs) + '</td>';
+        tdG +=
+          '<td class="sp-an-viz__sum-col sp-an-people__col--tot' +
+          (R.rs < 0 ? ' sp-an-viz__cell-num-neg' : '') +
+          '">' +
+          fmtInt_(R.rs) +
+          '</td>';
         tbG += '<tr><th scope="row" class="sp-an-viz__row-lbl">' + esc(R.lab1) + '</th>' + tdG + '</tr>';
       }
       if (!pSorted.length) {
@@ -2301,7 +2327,7 @@ export function initAnalytics(mount) {
           }
         }
         ssum += dsum;
-        sumB += '<td>' + (dsum ? fmtInt_(dsum) : '0') + '</td>';
+        sumB += peopleCountTdHtml_(dsum);
       }
       for (let ck0 = 0; ck0 < uniqueCats.length; ck0++) {
         const cmod3 = ck0 % 3;
@@ -2312,7 +2338,12 @@ export function initAnalytics(mount) {
           '—' +
           '</td>';
       }
-      sumB += '<td class="sp-an-viz__sum-col sp-an-people__col--tot">' + fmtInt_(ssum) + '</td></tr>';
+      sumB +=
+        '<td class="sp-an-viz__sum-col sp-an-people__col--tot' +
+        (ssum < 0 ? ' sp-an-viz__cell-num-neg' : '') +
+        '">' +
+        fmtInt_(ssum) +
+        '</td></tr>';
       if (el.peopleGrid) {
         el.peopleGrid.innerHTML = '<table class="sp-an-viz-table sp-an-people__grid">' + theg + tbG + sumB + '</table>';
       }

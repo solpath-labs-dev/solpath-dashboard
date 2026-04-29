@@ -25,7 +25,7 @@ function dbSyncProductsOnePage() {
   var status = 'OK';
 
   try {
-    var g = imwebTGetOpenSyncStrict_('/products', { page: 1, limit: 100, unitCode: uc });
+    var g = imwebTGetWithOpenSyncRetry_('/products', { page: 1, limit: 100, unitCode: uc });
     if (g._http !== 200) {
       throw new Error('GET /products http=' + g._http + ' ' + String(g._text).slice(0, 500));
     }

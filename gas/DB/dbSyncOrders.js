@@ -40,7 +40,7 @@ function dbSyncOrdersOpen() {
         Utilities.sleep(200);
       }
       var q = imwebTBuildOpenOrdersListQueryForPage_(uc, page, pageSize);
-      var g = imwebTGetOpenSyncStrict_('/orders', q);
+      var g = imwebTGetWithOpenSyncRetry_('/orders', q);
       if (g._http !== 200) {
         throw new Error('GET /orders http=' + g._http + ' ' + String(g._text).slice(0, 400));
       }
@@ -238,6 +238,20 @@ function dbFlattenOrderItemRowsOpen_(order, fetchedAtIso, syncId) {
   return out;
 }
 
+/**
+ * 취소 접수 시각(ISO) — 로그·시트 `claim_event_time` 참고용. **반품(return) 미운영**으로 `returnInfo`는 보지 않음.
+ * @param {Object} section order.sections[]
+ * @return {string}
+ */
+function dbOrderItemClaimEventTimeIso_(section) {
+  section = section || {};
+  var ci = section.cancelInfo;
+  if (ci && ci.cancelRequestTime != null && String(ci.cancelRequestTime).trim() !== '') {
+    return String(ci.cancelRequestTime).trim();
+  }
+  return '';
+}
+
 function dbMapOrderItemRowOpen_(order, section, item, fetchedAtIso, sourceSyncId) {
   order = order || {};
   section = section || {};
@@ -260,19 +274,14 @@ function dbMapOrderItemRowOpen_(order, section, item, fetchedAtIso, sourceSyncId
   var cType = '';
   if (section.cancelInfo && (section.cancelInfo.cancelRequestTime != null && String(section.cancelInfo.cancelRequestTime) !== '')) {
     cType = 'cancel';
-  } else if (section.returnInfo && section.returnInfo.returnRequestTime) {
-    cType = 'return';
   }
   var claimDetail = '';
   if (cType === 'cancel' && section.cancelInfo) {
     claimDetail = String(
       section.cancelInfo.cancelReason != null ? section.cancelInfo.cancelReason : section.cancelInfo.cancelReasonDetail != null ? section.cancelInfo.cancelReasonDetail : ''
     ).slice(0, 300);
-  } else if (cType === 'return' && section.returnInfo) {
-    claimDetail = String(
-      section.returnInfo.returnReason != null ? section.returnInfo.returnReason : section.returnInfo.returnReasonDetail != null ? section.returnInfo.returnReasonDetail : ''
-    ).slice(0, 300);
   }
+  var claimEventIso = cType === 'cancel' ? dbOrderItemClaimEventTimeIso_(section) : '';
   var rowObj = { orderSection: section, sectionItem: item, productInfo: pi };
   var rowStr = JSON.stringify(rowObj);
   if (rowStr.length > 49000) {
@@ -286,6 +295,7 @@ function dbMapOrderItemRowOpen_(order, section, item, fetchedAtIso, sourceSyncId
     section.orderSectionStatus != null ? String(section.orderSectionStatus) : '',
     cType,
     claimDetail,
+    claimEventIso,
     pi.prodNo != null ? pi.prodNo : '',
     pi.prodName != null ? String(pi.prodName) : '',
     pi.itemPrice != null ? pi.itemPrice : '',

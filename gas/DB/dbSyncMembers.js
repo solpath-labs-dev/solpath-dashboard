@@ -37,7 +37,7 @@ function dbMemberInfoFetchGroupCodeToTitleMap_(unitCode) {
   var page = 1;
   var pageSize = 100;
   while (true) {
-    var g = imwebTGetOpenSyncStrict_('/member-info/groups', { page: page, limit: pageSize, unitCode: unitCode });
+    var g = imwebTGetWithOpenSyncRetry_('/member-info/groups', { page: page, limit: pageSize, unitCode: unitCode });
     if (g._http !== 200) {
       throw new Error('GET /member-info/groups http=' + g._http + ' ' + String(g._text).slice(0, 400));
     }
@@ -188,7 +188,7 @@ function dbSyncMembersOpen() {
   try {
     var codeToTitle = dbMemberMergeGroupTitleOverrides_(dbMemberInfoFetchGroupCodeToTitleMap_(uc));
     while (true) {
-      var g = imwebTGetOpenSyncStrict_('/member-info/members', { page: page, limit: pageSize, unitCode: uc });
+      var g = imwebTGetWithOpenSyncRetry_('/member-info/members', { page: page, limit: pageSize, unitCode: uc });
       if (g._http !== 200) {
         throw new Error('GET /member-info/members http=' + g._http + ' ' + String(g._text).slice(0, 400));
       }

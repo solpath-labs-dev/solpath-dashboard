@@ -784,6 +784,12 @@ a.sp-an-head__cta.sp-sync-head__link:hover {
   color: #9a1c1c;
   background: #fff5f4;
 }
+/* 구매 건수: 환불 등으로 일·상품별 순감이 음수일 때 */
+.sp-an-viz-table td.sp-an-viz__cell-num-neg {
+  color: #9a1c1c;
+  font-weight: 600;
+  background: #fff5f4;
+}
 .sp-an-viz-table tr.sp-an-viz__row-total td:not(.sp-an-viz__row-lbl) {
   background: #eef4fc;
   font-weight: 600;

@@ -657,14 +657,136 @@ curl 'https://openapi.imweb.me/products/1/options/O2024092566f3726054a3a?unitCod
 
 등록·수정 등은 Reference에서 붙이면 이 카테고리 아래에 같은 형식으로 추가.
 
-#### 주문 (Open API `openapi.imweb.me` — Order 카테고리)
+#### 주문 (Open API — Order 카테고리)
 
-| Method | Path | 비고 |
-|--------|------|------|
-| GET | `/orders` | Query: `page`, `limit`, `unitCode` 등 (Reference). 주문일시 필터는 `startWtime` / `endWtime` (UTC ISO8601). **응답 `data.list[]`에 주문 1건당 `sections[].sectionItems[]` 포함** — `sectionItems[].productInfo.prodName`, `prodNo` 등으로 **품목·상품명은 목록/단건 안에 중첩됨**. |
-| GET | `/orders/{orderNo}` | Path: `orderNo`(number). 구조는 목록의 `list` 원소와 동일 계열. |
+**정본** — 아임웹 개발자 Reference **「주문 목록 조회」`GET /orders`** · **단건** `GET /orders/{orderNo}` 의 Query·응답 필드명. 아래 표는 Reference와 동일하게 적었고, 레포 **동기 코드**가 실제로 넣는 쿼리만 마지막에 따로 적는다.
 
-**→ 원천 DB 시트** — 구현: `dbSyncMembersOpen`, `dbSyncOrdersOpen`, `dbSyncProductsOnePage` (`gas/DB/`), **헤더**는 `dbSchema.js` (`DB_*_HEADERS`). `orders`·`members`·`order_items`·`products` 끝 2열은 `fetched_at`·`source_sync_id` (시트·열 이름은 [SPEC.md](./SPEC.md) §5.1.1). 아래 **Open API 필드명 ↔ 열**은 `dbMap*RowOpen_`와 동일.
+원천 동기는 `gas/DB/dbSyncOrders.js` **`dbSyncOrdersOpen`** — **`GET /orders`** 페이지 루프만. **`GET /orders/{orderNo}`** 는 디버그·스모크(`imwebDebugLogOrderToLogger`, `imwebApiTestAll` (11)). 목록의 `list[i]` 한 건과 단건 본문은 Reference와 동일 계열(`sections`·`sectionItems`·`cancelInfo`·`payments` 등). 응답에 `returnInfo`·`exchangeInfo` 등이 있을 수 있으나 **이 레포 시트 매핑은 취소(`cancelInfo`)만 사용**(반품·교환 미운영 가정).
+
+##### `GET /orders` — 주문 목록
+
+Query·enum **전체**는 아임웹 Reference「주문 목록 조회」정본.
+
+**레포 동기 실제 전송** — `imwebTBuildOpenOrdersListQueryForPage_`: `page`, `limit`, `unitCode`, `startWtime`, `endWtime`(180일 윈도). 취소·배송 등 나머지 Query 키는 API에 있어도 **현재 동기에서는 미전송**.
+
+| Method | URL (전체) | Headers |
+|--------|------------|---------|
+| GET | `https://openapi.imweb.me/orders` | `Authorization: Bearer <YOUR_ACCESS_TOKEN>` |
+
+*최소 cURL (동기와 동일 조합)*
+
+```bash
+curl 'https://openapi.imweb.me/orders?page=1&limit=50&unitCode=YOUR_UNIT_CODE&startWtime=2025-10-01T00%3A00%3A00.000Z&endWtime=2026-04-29T23%3A59%3A59.999Z' \
+  --header 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+*Reference 예시 쿼리(전체 파라미터)* — 개발자 문서의 Shell Curl 그대로 두고, 여기서는 생략. 필터·enum 전체는 **Reference 정본**.
+
+**성공 응답 (Reference 스키마 요약)** — `statusCode: 200`, `data`:
+
+| 필드 | 설명 |
+|------|------|
+| `totalCount` | 전체 건수 |
+| `totalPage` | 전체 페이지 |
+| `currentPage` | 현재 페이지 |
+| `pageSize` | 페이지 크기 |
+| `list` | 주문 객체 배열 |
+
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "totalCount": 1,
+    "totalPage": 1,
+    "currentPage": 1,
+    "pageSize": 1,
+    "list": [
+      {
+        "orderNo": 1,
+        "orderStatus": "OPEN",
+        "wtime": "2025-04-24T00:00:00.000Z",
+        "sections": [
+          {
+            "orderSectionStatus": "PRODUCT_PREPARATION",
+            "sectionItems": [
+              {
+                "orderSectionItemNo": "string",
+                "gradeDiscount": 1,
+                "itemCouponDiscount": 1,
+                "itemPointAmount": 1,
+                "itemPromotionDiscount": 1,
+                "productInfo": { "prodNo": 1, "prodName": "string", "itemPrice": 1, "optionInfo": {} }
+              }
+            ],
+            "cancelInfo": {
+              "cancelReason": "string",
+              "cancelRequestTime": "string",
+              "refundAmount": 1,
+              "isRefund": "Y"
+            }
+          }
+        ],
+        "payments": []
+      }
+    ]
+  }
+}
+```
+
+| `list[]` 내부 (시트 매핑 관점) | 설명 |
+|-------------------------------|------|
+| `list[]` | 주문 1건 → 시트 `orders` 1행 + `order_items` 다행 |
+| `sections[]` | 섹션. `orderSectionStatus` → 시트 `section_status`(품목 행의 섹션 상태) |
+| `sections[].sectionItems[]` | 품목 1칸 → `order_items` 1행 (`dbMapOrderItemRowOpen_`) |
+| `sections[].cancelInfo` | 취소 객체 — 레포는 아래 `claim_*` 열에만 매핑(반품·교환 필드는 미사용) |
+| `payments[]` | 결제·환불 상태 등 — **현재 시트 매핑에는 미사용**(필요 시 별도 설계) |
+
+**운영 실측 — `cancelInfo` 발췌**  
+시트 `claim_event_time`: 응답 **`cancelInfo.cancelRequestTime`**(ISO)만. (Reference Query의 `startCancelRequestTime` 등은 목록 필터용·시트 미저장.)
+
+```json
+{
+  "isCustomerRequest": "Y",
+  "cancelReason": "구매 의사 취소",
+  "cancelReasonDetail": "",
+  "cancelRequestTime": "2026-03-16T23:33:22.000Z",
+  "refundAmount": 14900,
+  "isRefund": "Y"
+}
+```
+
+##### `GET /orders/{orderNo}` — 주문 단건
+
+| Method | URL (전체) | Headers |
+|--------|------------|---------|
+| GET | `https://openapi.imweb.me/orders/{orderNo}` | `Authorization: Bearer <YOUR_ACCESS_TOKEN>` |
+
+**Path**
+
+| 파라미터 | 설명 |
+|----------|------|
+| `orderNo` | 주문번호 (`encodeURIComponent` 권장) |
+
+**Query (구현·디버그)**
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|----------|------|------|------|
+| `unitCode` | string | ✓ | 상품 단건 등과 동일 — **디버그·테스트에서 필수에 가깝게 사용** |
+
+*cURL (예)*
+
+```bash
+curl 'https://openapi.imweb.me/orders/202603162774427?unitCode=YOUR_UNIT_CODE' \
+  --header 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+**성공 응답** — `data`가 **목록의 `list[i]` 한 건과 동일한 객체**이거나, 일부 응답에서는 `data.list[0]` 형태로 올 수 있음. GAS `imwebDebugLogOrderToLogger`는 둘 다 처리.
+
+**Responses** — **200** 조회 성공 · **default** 오류(Error List는 아임웹 Reference).
+
+---
+
+**→ 원천 DB 시트** — 구현: `dbSyncOrdersOpen` 등 (`gas/DB/`), **헤더**는 `dbSchema.js` (`DB_*_HEADERS`). `orders`·`members`·`order_items`·`products` 끝 2열은 `fetched_at`·`source_sync_id` ([SPEC.md](./SPEC.md) §5.1.1). 아래 **Open API 필드명 ↔ 열**은 `dbMapOrderRowOpen_` / `dbMapOrderItemRowOpen_`와 동일.
 
 | `orders` | Open API |
 |----------|----------|
@@ -678,8 +800,9 @@ curl 'https://openapi.imweb.me/products/1/options/O2024092566f3726054a3a?unitCod
 |----------|----------|
 | `order_section_item_no` / `order_item_code` | `orderSectionItemNo` / `orderItemCode` |
 | `order_no` / `order_status` / `section_status` | `orderNo` / `orderStatus` / `orderSectionStatus` (섹션) |
-| `claim_status` | `cancelInfo.cancelRequestTime`이 있으면 `cancel`, 아니면 `returnInfo.returnRequestTime`이 있으면 `return`, 아니면 빈칸 |
-| `claim_type` | 취소/반품 **사유** 문자열(최대 300자) — `cancelInfo` / `returnInfo`의 reason 필드 |
+| `claim_status` | `cancelInfo.cancelRequestTime`이 있으면 `cancel`, 없으면 빈칸 (**반품 `return` 미매핑**) |
+| `claim_type` | 취소 사유(최대 300자) — `cancelInfo.cancelReason` / `cancelReasonDetail` |
+| `claim_event_time` | `claim_status === cancel`일 때만 — `cancelInfo.cancelRequestTime`(ISO). 집계 `02_주문라인_실적`에 동명 열로 복사되며, **일별 매출·건수**는 주문일(`order_time`)에 +, 본 시각의 서울 일자에 환불·−건수. |
 | `prod_no` / `prod_name` / `line_price` | `productInfo.prodNo` / `prodName` / `itemPrice` |
 | `line_price_sale` / `line_point` / `line_coupon` | `gradeDiscount`+`itemCouponDiscount`+`itemPromotionDiscount` / `itemPointAmount` / `itemCouponDiscount` |
 | `line_period_discount` | `0` (고정) |
@@ -994,5 +1117,7 @@ action=initOperationsSheets
 | 2026-04-25 | **GAS** — `TextOutput`에 CORS `setHeader` 없음·브라우저는 **JSONP** (`GET ?format=jsonp`). `getRange` 3·4인자=**행/열 개수** (`dbSheets.js`). 상세: [GAS_WEBAPP_SHEETS.md](./GAS_WEBAPP_SHEETS.md) · §2~4 갱신 |
 | 2026-04-25 | **§2.3** — `productMappingState` / `productMappingList` (GET JSONP), `initOperationsSheets` / `productMappingApply` (POST). [SCHEMA_PRODUCT_MAPPING.md](./SCHEMA_PRODUCT_MAPPING.md), [front/docs/PRODUCT_CLASSIFICATION_UI.md](../front/docs/PRODUCT_CLASSIFICATION_UI.md) |
 | 2026-04-25 | **§2.4** — `SHEETS_ANALYTICS_ID`, `initAnalyticsSheets` / `analyticsTargetsGet` / `analyticsTargetsApply` / `analyticsResetAll`, `productMappingState`에 analytics 필드 병합. [ANALYTICS_REPORTS.md](./ANALYTICS_REPORTS.md) |
+| 2026-04-29 | **Order (Ground)** — `GET /orders`·`GET /orders/{orderNo}` 를 Member-Info·Product와 동일 절차(헤더 표·Query·cURL·응답 골격·`data` 설명·실측 `cancelInfo` 예). 동기/단건·`imwebDebugLogOrderToLogger` 구분 명시 |
+| 2026-04-29 | **Order `GET /orders`** — Query는 Reference 위임·동기 5키만 명시. 반품·교환 미매핑·`ledger_ymd`=주문일·`claim_*`=취소만 문서·코드 정합 |
 
 이후부터는 **날짜당 한 줄** 위주로 쌓고, 상세는 [process.md](../process.md) 변경 이력·[GAS_WEBAPP_SHEETS.md](./GAS_WEBAPP_SHEETS.md)에 남긴다.

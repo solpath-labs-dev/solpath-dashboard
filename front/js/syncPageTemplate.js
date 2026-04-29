@@ -19,7 +19,7 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
           >수동 동기화</button>
         </div>
         <div class="sp-intro-wrap">
-          <div class="sp-intro-card sp-intro-card--an" id="sp-introAn" aria-hidden="false">
+          <div class="sp-intro-card sp-intro-card--an" id="sp-introAn" hidden aria-hidden="true">
             <p class="sp-intro-title">매출·구매 건수 지표 · 사용 안내</p>
             <ul class="sp-intro-list">
               <li><strong>이 탭</strong>은 실제 <strong>매출(원) 목표</strong>와 <strong>인원(건수) 목표</strong>를 <strong>숫자로</strong> 모아 두는 곳입니다. <strong>꺾은선·막대 그래프는 없고</strong>, <strong>표(칸)</strong>로만 보고 고칩니다. (연동·상품분류·이 목표는 <strong>드라이브에 파일이 셋</strong>으로 갈립니다.)</li>
@@ -60,11 +60,20 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
           <button
             type="button"
             class="sp-tabs__btn is-active"
-            id="sp-tab-an"
+            id="sp-tab-home"
             role="tab"
             aria-selected="true"
-            aria-controls="sp-panel-an"
+            aria-controls="sp-panel-home"
             tabindex="0"
+          >홈</button>
+          <button
+            type="button"
+            class="sp-tabs__btn"
+            id="sp-tab-an"
+            role="tab"
+            aria-selected="false"
+            aria-controls="sp-panel-an"
+            tabindex="-1"
           >매출·구매 건수</button>
           <button
             type="button"
@@ -105,9 +114,21 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
         <div class="sp-tab-panels">
         <section
           class="sp-tab-panel is-active"
+          id="sp-panel-home"
+          role="tabpanel"
+          aria-labelledby="sp-tab-home"
+        >
+          <div class="panel panel--hero sp-home-manual">
+            <div class="sp-home-manual-root" id="sp-homeManualRoot" aria-label="메뉴얼(작성 예정)"></div>
+          </div>
+        </section>
+
+        <section
+          class="sp-tab-panel"
           id="sp-panel-an"
           role="tabpanel"
           aria-labelledby="sp-tab-an"
+          hidden
         >
           <div class="panel panel--hero" id="sp-an-root">
             <div class="panel__head sp-an-head">

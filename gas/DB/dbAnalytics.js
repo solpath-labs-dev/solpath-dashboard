@@ -424,7 +424,7 @@ function dbAnalyticsOrderLinesRebuildFromMaster_() {
   }
   var pmMap = dbPmReadMappingMap_();
   var iLr = shI.getLastRow();
-  var nCol = 11;
+  var nCol = 13;
   var iVals = shI.getRange(2, 1, iLr - 1, nCol).getValues();
   var out = [];
   var skipped = 0;
@@ -432,7 +432,7 @@ function dbAnalyticsOrderLinesRebuildFromMaster_() {
   for (j = 0; j < iVals.length; j++) {
     var L = iVals[j] || [];
     var ordNo = String(L[2] != null ? L[2] : '').trim();
-    var pkey = dbPmRowKey_(L[7]);
+    var pkey = dbPmRowKey_(L[8]);
     var cat = 'unmapped';
     var life = 'active';
     if (pkey && pmMap[pkey]) {
@@ -449,20 +449,24 @@ function dbAnalyticsOrderLinesRebuildFromMaster_() {
       skipped++;
       continue;
     }
-    var lineNet = dbNumO_(L[9]) - dbNumO_(L[10]);
+    var lineNet = dbNumO_(L[10]) - dbNumO_(L[11]) - dbNumO_(L[12]);
     var sec = String(L[4] != null ? L[4] : '');
+    var ledgerYmd = dbAnAnyToSeoulYmd_(orderMap[ordNo] != null ? orderMap[ordNo] : '');
+    var claimIso = L[7] != null ? String(L[7]).trim() : '';
     out.push([
       L[0],
       L[1],
       ordNo,
       orderMap[ordNo] != null ? orderMap[ordNo] : '',
-      L[7],
-      String(L[8] != null ? L[8] : ''),
+      ledgerYmd,
+      L[8],
+      String(L[9] != null ? L[9] : ''),
       lineNet,
       sec,
       cat,
       life,
-      pkey && addByProd[pkey] != null && addByProd[pkey] !== undefined ? addByProd[pkey] : ''
+      pkey && addByProd[pkey] != null && addByProd[pkey] !== undefined ? addByProd[pkey] : '',
+      claimIso
     ]);
   }
   var shOut = dbAnGetOrderLinesSheet_(ssA);
@@ -1099,7 +1103,7 @@ function dbAnNormalizeCardScope_(scopeRaw) {
 
 /**
  * `02_주문라인_실적` — `dbAnVirtualFactRowsFromOrderLines_`와 동일한 행 선별 후,
- * `DB_AN_AGG_EXCLUDE_CATEGORY` 대분류 줄 제외 후 순매출(매출−환불)·주문 건수(고유 order_no). (교재·자소서 포함)
+ * `DB_AN_AGG_EXCLUDE_CATEGORY` 대분류 줄 제외. **주문일**에 매출·+건수, **`claim_event_time`(취소 접수일)** 에 환불액·−건수. (교재·자소서 포함)
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ssA 집계 스프레드시트
  * @param {number} y
  * @param {number} m 0 = 해당 연도 1–12월 전부, 1–12 = 해당 월만
@@ -1131,7 +1135,8 @@ function dbAnSalesCardsMetricsFrom02_(ssA, y, m, scopeCat) {
 
   var salesSum = 0;
   var refundSum = 0;
-  var ordSet = {};
+  var orderDelta = 0;
+  var cardBuckets = {};
 
   var j;
   for (j = 0; j < vals.length; j++) {
@@ -1140,28 +1145,23 @@ function dbAnSalesCardsMetricsFrom02_(ssA, y, m, scopeCat) {
     if (!ordN) {
       continue;
     }
-    var ymd0 = dbAnAnyToSeoulYmd_(L2[3]);
-    if (!ymd0) {
+    var ymdOrder = dbAnLedgerYmdFrom02Row_(L2);
+    if (!ymdOrder) {
       continue;
     }
-    var pr2 = ymd0.split('-');
-    if (pr2.length < 2) {
+    var ymdRefund = '';
+    if (L2.length > 12 && L2[12] != null && String(L2[12]).trim() !== '') {
+      ymdRefund = dbAnAnyToSeoulYmd_(L2[12]);
+    }
+    var inO = dbAn02RowYmdInYearMonth_(ymdOrder, y, m);
+    var inR = ymdRefund.length >= 10 && dbAn02RowYmdInYearMonth_(ymdRefund, y, m);
+    if (!inO && !inR) {
       continue;
     }
-    if (parseInt(pr2[0], 10) !== y) {
-      continue;
-    }
-    if (m !== 0) {
-      if (parseInt(pr2[1], 10) !== m) {
-        continue;
-      }
-    }
-    var claim2 = String(L2[7] != null ? L2[7] : '').trim();
-    var isRe = claim2 === 'cancel' || claim2 === 'return';
-    var pRaw2 = L2[4];
+    var pRaw2 = L2[5];
     var pkey2 = dbPmRowKey_(pRaw2);
-    var cat2 = String(L2[8] != null ? L2[8] : 'unmapped').trim() || 'unmapped';
-    var life2 = String(L2[9] != null ? L2[9] : '').trim();
+    var cat2 = String(L2[9] != null ? L2[9] : 'unmapped').trim() || 'unmapped';
+    var life2 = String(L2[10] != null ? L2[10] : '').trim();
     if (life2 === 'test') {
       continue;
     }
@@ -1171,7 +1171,7 @@ function dbAnSalesCardsMetricsFrom02_(ssA, y, m, scopeCat) {
     if (scF && cat2 !== scF) {
       continue;
     }
-    var ymdP2 = ymd0.split('-');
+    var ymdP2 = ymdOrder.split('-');
     if (ymdP2.length < 2) {
       continue;
     }
@@ -1183,30 +1183,42 @@ function dbAnSalesCardsMetricsFrom02_(ssA, y, m, scopeCat) {
     }
     var pmR2 = pkey2 ? pmMap[pkey2] : null;
     var seY2 = pmR2 && pmR2.sales_end ? String(pmR2.sales_end).trim() : '';
-    if (seY2.length >= 8 && dbAnOrderYmdAfterSalesEndExclusive_(ymd0, seY2)) {
+    if (seY2.length >= 8 && dbAnOrderYmdAfterSalesEndExclusive_(ymdOrder, seY2)) {
       continue;
     }
-    var rawAmt2 = dbNumO_(L2[6]);
-    if (isRe) {
-      var ra2 = Math.abs(rawAmt2);
-      if (ra2 > 0) {
-        refundSum += ra2;
-      }
-    } else {
+    var rawAmt2 = dbNumO_(L2[7]);
+    var pnum2 = parseInt(pRaw2, 10);
+    var pnoS2 = isNaN(pnum2) ? '' : String(pnum2);
+    if (inO) {
       if (rawAmt2 > 0) {
-        salesSum += rawAmt2;
+        dbAnRevBucketTouch_(cardBuckets, ymdOrder, cat2, pnoS2, rawAmt2, 0, 1, 0, false);
+      } else if (rawAmt2 < 0) {
+        dbAnRevBucketTouch_(cardBuckets, ymdOrder, cat2, pnoS2, 0, Math.abs(rawAmt2), 0, 1, false);
+      } else {
+        dbAnRevBucketTouch_(cardBuckets, ymdOrder, cat2, pnoS2, 0, 0, 1, 0, false);
       }
     }
-    ordSet[ordN] = 1;
-  }
-  var oc = 0;
-  for (var ko in ordSet) {
-    if (ordSet.hasOwnProperty(ko)) {
-      oc++;
+    if (inR) {
+      if (rawAmt2 > 0) {
+        dbAnRevBucketTouch_(cardBuckets, ymdRefund, cat2, pnoS2, 0, rawAmt2, 0, 1, false);
+      } else if (rawAmt2 < 0) {
+        dbAnRevBucketTouch_(cardBuckets, ymdRefund, cat2, pnoS2, Math.abs(rawAmt2), 0, 1, 0, false);
+      } else {
+        dbAnRevBucketTouch_(cardBuckets, ymdRefund, cat2, pnoS2, 0, 0, 0, 1, false);
+      }
     }
+  }
+  for (var cbkKey in cardBuckets) {
+    if (!Object.prototype.hasOwnProperty.call(cardBuckets, cbkKey)) {
+      continue;
+    }
+    var cb = cardBuckets[cbkKey];
+    salesSum += cb.sales;
+    refundSum += cb.refund;
+    orderDelta += cb.linesPos - cb.linesNeg;
   }
   z.netSales = salesSum - refundSum;
-  z.orderCount = oc;
+  z.orderCount = orderDelta;
   return z;
 }
 
@@ -1311,6 +1323,70 @@ function dbAnAnyToSeoulYmd_(v) {
 }
 
 /**
+ * `02_주문라인_실적` 행 — 집계·일별 fact 기준일. **항상 주문 시각** `order_time` 열만 사용 (`ledger_ymd` 열은 동일 값으로 채우지만 집계는 본 열 정본).
+ * @param {*[]} L2 한 행
+ * @return {string}
+ */
+function dbAnLedgerYmdFrom02Row_(L2) {
+  L2 = L2 || [];
+  return dbAnAnyToSeoulYmd_(L2[3]);
+}
+
+/**
+ * 서울 `yyyy-MM-dd`가 조회 연·월에 포함되는지. `m===0`이면 해당 연도의 1–12월 전부.
+ * @param {string} ymd
+ * @param {number} y
+ * @param {number} m
+ * @return {boolean}
+ */
+function dbAn02RowYmdInYearMonth_(ymd, y, m) {
+  if (ymd == null || String(ymd).length < 8) {
+    return false;
+  }
+  var pr = String(ymd).split('-');
+  if (pr.length < 2) {
+    return false;
+  }
+  if (parseInt(pr[0], 10) !== y) {
+    return false;
+  }
+  if (m >= 1 && m <= 12) {
+    return parseInt(pr[1], 10) === m;
+  }
+  if (m === 0) {
+    var mm = parseInt(pr[1], 10);
+    return isFinite(mm) && mm >= 1 && mm <= 12;
+  }
+  return false;
+}
+
+/**
+ * 일별 매출·환불·건수 버킷 갱신. `withMeta` true면 fact용 `{ ymd, cat, pno, … }` 초기화.
+ * @param {Object} bucket
+ * @param {string} ymdB
+ * @param {string} cat2
+ * @param {string} pnoS2
+ * @param {number} dSales
+ * @param {number} dRefund
+ * @param {number} dPos
+ * @param {number} dNeg
+ * @param {boolean} withMeta
+ */
+function dbAnRevBucketTouch_(bucket, ymdB, cat2, pnoS2, dSales, dRefund, dPos, dNeg, withMeta) {
+  var k = ymdB + '\t' + cat2 + '\t' + pnoS2;
+  if (!bucket[k]) {
+    bucket[k] = withMeta
+      ? { ymd: ymdB, cat: cat2, pno: pnoS2, sales: 0, refund: 0, linesPos: 0, linesNeg: 0 }
+      : { sales: 0, refund: 0, linesPos: 0, linesNeg: 0 };
+  }
+  var b = bucket[k];
+  b.sales += dSales;
+  b.refund += dRefund;
+  b.linesPos += dPos;
+  b.linesNeg += dNeg;
+}
+
+/**
  * `YYYY-MM-DD`가 `year`·`month` 범위에 들어가는지. `m===0`이면 그 해 전체 월.
  * @param {string} ymd
  * @param {number} y
@@ -1362,7 +1438,7 @@ function dbAnGetFactSheetOrThrow_() {
 }
 
 /**
- * `order_time` 열(4) 기준 `YYYY-MM-` prefix — 02_주문라인_실적 **부분** 삭제용(수선 보조)
+ * `order_time` 열(4) 기준 `YYYY-MM-` prefix — 02_주문라인_실적 **부분** 삭제용(수선 보조). 집계일=주문일.
  * @param {GoogleAppsScript.Spreadsheet.Sheet} shF
  * @param {string} pfx
  */
@@ -1449,6 +1525,7 @@ function dbAnVirtualFactRowsFromOrderLines_(y, m) {
   var pmMapV = dbPmReadMappingMap_();
   var monthMemByCat = {};
   var agg = {};
+  var factBuckets = {};
   var um2 = {};
   function addAgg(ymd, cat, pno, metric, val) {
     var pk = pno + '\t' + ymd + '\t' + cat + '\t' + metric;
@@ -1464,37 +1541,32 @@ function dbAnVirtualFactRowsFromOrderLines_(y, m) {
     if (!ordN) {
       continue;
     }
-    var ymd0 = dbAnAnyToSeoulYmd_(L2[3]);
-    if (!ymd0) {
+    var ymdOrder = dbAnLedgerYmdFrom02Row_(L2);
+    if (!ymdOrder) {
       continue;
     }
-    var pr2 = ymd0.split('-');
-    if (pr2.length < 2) {
+    var ymdRefund = '';
+    if (L2.length > 12 && L2[12] != null && String(L2[12]).trim() !== '') {
+      ymdRefund = dbAnAnyToSeoulYmd_(L2[12]);
+    }
+    var inO = dbAn02RowYmdInYearMonth_(ymdOrder, y, m);
+    var inR = ymdRefund.length >= 10 && dbAn02RowYmdInYearMonth_(ymdRefund, y, m);
+    if (!inO && !inR) {
       continue;
     }
-    if (parseInt(pr2[0], 10) !== y) {
-      continue;
-    }
-    if (m >= 1 && m <= 12) {
-      if (parseInt(pr2[1], 10) !== m) {
-        continue;
-      }
-    }
-    var claim2 = String(L2[7] != null ? L2[7] : '').trim();
-    var isRe = claim2 === 'cancel' || claim2 === 'return';
-    var pRaw2 = L2[4];
+    var pRaw2 = L2[5];
     var pkey2 = dbPmRowKey_(pRaw2);
-    var cat2 = String(L2[8] != null ? L2[8] : 'unmapped').trim() || 'unmapped';
+    var cat2 = String(L2[9] != null ? L2[9] : 'unmapped').trim() || 'unmapped';
     var pnum2 = parseInt(pRaw2, 10);
     var pnoS2 = isNaN(pnum2) ? '' : String(pnum2);
-    var life2 = String(L2[9] != null ? L2[9] : '').trim();
+    var life2 = String(L2[10] != null ? L2[10] : '').trim();
     if (life2 === 'test') {
       continue;
     }
     if (DB_AN_AGG_EXCLUDE_CATEGORY[cat2]) {
       continue;
     }
-    var ymdP2 = ymd0.split('-');
+    var ymdP2 = ymdOrder.split('-');
     if (ymdP2.length < 2) {
       continue;
     }
@@ -1506,25 +1578,32 @@ function dbAnVirtualFactRowsFromOrderLines_(y, m) {
     }
     var pmRv = pkey2 ? pmMapV[pkey2] : null;
     var seYv = pmRv && pmRv.sales_end ? String(pmRv.sales_end).trim() : '';
-    if (seYv.length >= 8 && dbAnOrderYmdAfterSalesEndExclusive_(ymd0, seYv)) {
+    if (seYv.length >= 8 && dbAnOrderYmdAfterSalesEndExclusive_(ymdOrder, seYv)) {
       continue;
     }
-    var rawAmt2 = dbNumO_(L2[6]);
-    if (isRe) {
-      var ra2 = Math.abs(rawAmt2);
-      if (ra2 > 0) {
-        addAgg(ymd0, cat2, pnoS2, DB_AN_FACT_REFUND, ra2);
-      }
-    } else {
+    var rawAmt2 = dbNumO_(L2[7]);
+    if (inO) {
       if (rawAmt2 > 0) {
-        addAgg(ymd0, cat2, pnoS2, DB_AN_FACT_SALES, rawAmt2);
+        dbAnRevBucketTouch_(factBuckets, ymdOrder, cat2, pnoS2, rawAmt2, 0, 1, 0, true);
+      } else if (rawAmt2 < 0) {
+        dbAnRevBucketTouch_(factBuckets, ymdOrder, cat2, pnoS2, 0, Math.abs(rawAmt2), 0, 1, true);
+      } else {
+        dbAnRevBucketTouch_(factBuckets, ymdOrder, cat2, pnoS2, 0, 0, 1, 0, true);
       }
-      addAgg(ymd0, cat2, pnoS2, DB_AN_FACT_LINES, 1);
     }
-    if (!isRe) {
+    if (inR) {
+      if (rawAmt2 > 0) {
+        dbAnRevBucketTouch_(factBuckets, ymdRefund, cat2, pnoS2, 0, rawAmt2, 0, 1, true);
+      } else if (rawAmt2 < 0) {
+        dbAnRevBucketTouch_(factBuckets, ymdRefund, cat2, pnoS2, Math.abs(rawAmt2), 0, 1, 0, true);
+      } else {
+        dbAnRevBucketTouch_(factBuckets, ymdRefund, cat2, pnoS2, 0, 0, 0, 1, true);
+      }
+    }
+    if (inO && rawAmt2 > 0) {
       var mem2 = orderMem[ordN];
       if (mem2) {
-        var uu2 = ymd0 + '\t' + cat2;
+        var uu2 = ymdOrder + '\t' + cat2;
         if (!um2[uu2]) {
           um2[uu2] = {};
         }
@@ -1535,6 +1614,22 @@ function dbAnVirtualFactRowsFromOrderLines_(y, m) {
         }
         monthMemByCat[mck2][mem2] = 1;
       }
+    }
+  }
+  for (var fbkKey in factBuckets) {
+    if (!Object.prototype.hasOwnProperty.call(factBuckets, fbkKey)) {
+      continue;
+    }
+    var fb = factBuckets[fbkKey];
+    if (fb.sales > 0) {
+      addAgg(fb.ymd, fb.cat, fb.pno, DB_AN_FACT_SALES, fb.sales);
+    }
+    if (fb.refund > 0) {
+      addAgg(fb.ymd, fb.cat, fb.pno, DB_AN_FACT_REFUND, fb.refund);
+    }
+    var lineAdj2 = fb.linesPos - fb.linesNeg;
+    if (lineAdj2 !== 0) {
+      addAgg(fb.ymd, fb.cat, fb.pno, DB_AN_FACT_LINES, lineAdj2);
     }
   }
   var batchId = 'v02-' + new Date().getTime();
@@ -1732,17 +1827,17 @@ function dbAnalytics02ProdNameMap_() {
   }
   var lr = sh.getLastRow();
   var nR = Math.max(0, lr - 1);
-  /** 열 4~6: order_time, prod_no, prod_name */
-  var v = nR > 0 ? sh.getRange(2, 4, nR, 3).getValues() : [];
+  /** 열 D~G: order_time, ledger_ymd, prod_no, prod_name */
+  var v = nR > 0 ? sh.getRange(2, 4, nR, 4).getValues() : [];
   var j;
   for (j = 0; j < v.length; j++) {
     var row = v[j] || [];
-    var pk = dbPmRowKey_(row[1]);
+    var pk = dbPmRowKey_(row[2]);
     if (!pk.length) {
       continue;
     }
     var tMs = dbAnOrderTimeToMs_(row[0]);
-    var nm = String(row[2] != null ? row[2] : '').trim() || '상품 ' + pk;
+    var nm = String(row[3] != null ? row[3] : '').trim() || '상품 ' + pk;
     var cur = bestMs[pk];
     if (cur === undefined || tMs >= cur) {
       bestMs[pk] = tMs;

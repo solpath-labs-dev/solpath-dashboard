@@ -110,61 +110,53 @@ function wireTabs_() {
   if (!mount) {
     return;
   }
+  const tHome = mount.querySelector('#sp-tab-home');
   const tSync = mount.querySelector('#sp-tab-sync');
   const tPm = mount.querySelector('#sp-tab-pm');
   const tAn = mount.querySelector('#sp-tab-an');
+  const pHome = mount.querySelector('#sp-panel-home');
   const pSync = mount.querySelector('#sp-panel-sync');
   const pPm = mount.querySelector('#sp-panel-pm');
   const pAn = mount.querySelector('#sp-panel-an');
-  if (!tSync || !tPm || !tAn || !pSync || !pPm || !pAn) {
+  if (!tHome || !tSync || !tPm || !tAn || !pHome || !pSync || !pPm || !pAn) {
     return;
   }
   const introSync = /** @type {HTMLElement | null} */ (mount.querySelector('#sp-introSync'));
   const introPm = /** @type {HTMLElement | null} */ (mount.querySelector('#sp-introPm'));
   const introAn = /** @type {HTMLElement | null} */ (mount.querySelector('#sp-introAn'));
+  function hideIntroAll_() {
+    if (introSync) {
+      introSync.setAttribute('hidden', '');
+      introSync.setAttribute('aria-hidden', 'true');
+    }
+    if (introPm) {
+      introPm.setAttribute('hidden', '');
+      introPm.setAttribute('aria-hidden', 'true');
+    }
+    if (introAn) {
+      introAn.setAttribute('hidden', '');
+      introAn.setAttribute('aria-hidden', 'true');
+    }
+  }
   function setIntroTab_(which) {
-    if (which === 'pm') {
-      if (introSync) {
-        introSync.setAttribute('hidden', '');
-        introSync.setAttribute('aria-hidden', 'true');
-      }
-      if (introAn) {
-        introAn.setAttribute('hidden', '');
-        introAn.setAttribute('aria-hidden', 'true');
-      }
-      if (introPm) {
-        introPm.removeAttribute('hidden');
-        introPm.setAttribute('aria-hidden', 'false');
-      }
-    } else if (which === 'an') {
-      if (introSync) {
-        introSync.setAttribute('hidden', '');
-        introSync.setAttribute('aria-hidden', 'true');
-      }
-      if (introPm) {
-        introPm.setAttribute('hidden', '');
-        introPm.setAttribute('aria-hidden', 'true');
-      }
-      if (introAn) {
-        introAn.removeAttribute('hidden');
-        introAn.setAttribute('aria-hidden', 'false');
-      }
-    } else {
-      if (introPm) {
-        introPm.setAttribute('hidden', '');
-        introPm.setAttribute('aria-hidden', 'true');
-      }
-      if (introAn) {
-        introAn.setAttribute('hidden', '');
-        introAn.setAttribute('aria-hidden', 'true');
-      }
-      if (introSync) {
-        introSync.removeAttribute('hidden');
-        introSync.setAttribute('aria-hidden', 'false');
-      }
+    hideIntroAll_();
+    if (which === 'home') {
+      /* 홈: 헤더 안내 카드 없음(메뉴얼은 #sp-homeManualRoot에 추후 작성) */
+    } else if (which === 'pm' && introPm) {
+      introPm.removeAttribute('hidden');
+      introPm.setAttribute('aria-hidden', 'false');
+    } else if (which === 'an' && introAn) {
+      introAn.removeAttribute('hidden');
+      introAn.setAttribute('aria-hidden', 'false');
+    } else if (which === 'sync' && introSync) {
+      introSync.removeAttribute('hidden');
+      introSync.setAttribute('aria-hidden', 'false');
     }
   }
   function deactivateAllTabs_() {
+    tHome.classList.remove('is-active');
+    tHome.setAttribute('aria-selected', 'false');
+    tHome.tabIndex = -1;
     tSync.classList.remove('is-active');
     tSync.setAttribute('aria-selected', 'false');
     tSync.tabIndex = -1;
@@ -174,12 +166,23 @@ function wireTabs_() {
     tAn.classList.remove('is-active');
     tAn.setAttribute('aria-selected', 'false');
     tAn.tabIndex = -1;
+    pHome.classList.remove('is-active');
+    pHome.setAttribute('hidden', '');
     pSync.classList.remove('is-active');
     pSync.setAttribute('hidden', '');
     pPm.classList.remove('is-active');
     pPm.setAttribute('hidden', '');
     pAn.classList.remove('is-active');
     pAn.setAttribute('hidden', '');
+  }
+  function activateHome() {
+    deactivateAllTabs_();
+    tHome.classList.add('is-active');
+    tHome.setAttribute('aria-selected', 'true');
+    tHome.tabIndex = 0;
+    pHome.classList.add('is-active');
+    pHome.removeAttribute('hidden');
+    setIntroTab_('home');
   }
   function activateSync() {
     deactivateAllTabs_();
@@ -208,10 +211,11 @@ function wireTabs_() {
     pAn.removeAttribute('hidden');
     setIntroTab_('an');
   }
+  tHome.addEventListener('click', activateHome);
   tSync.addEventListener('click', activateSync);
   tPm.addEventListener('click', activatePm);
   tAn.addEventListener('click', activateAn);
-  setIntroTab_('an');
+  activateHome();
 }
 
 function setChip(text, kind) {

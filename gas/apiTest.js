@@ -659,3 +659,139 @@ function imwebTFirstOrderNoFromBody_(raw) {
   }
   return '';
 }
+
+/**
+ * **디버그 전용** — 아임웹 `GET /orders/{orderNo}`(unitCode 필수)로 1건 받아 Logger에 출력.
+ * 동기 `GET /orders` 목록의 **각 원소와 동일 계열** 구조이나, 취소/반품·가격 확인은 단건이 보기 쉬움.
+ *
+ * **실행:** GAS 에디터에서 `imwebDebugLogOrderToLogger()` 또는 `imwebDebugLogOrderToLogger('주문번호')`
+ * (Node `require` 없음 — `apiTest.js`·`dbSyncOrders.js`·`dbSchema.js` 같은 스크립트 프로젝트에만 있으면 됨.)
+ *
+ * 출력: 주문 요약, 섹션별 `cancelInfo`/`returnInfo` **전 키·값**, 라인 원본 금액, `dbMapOrderItemRowOpen_`로 만든 시트 행( line_price / line_price_sale / line_point / line_coupon ) 및 **line_net(재구축 식)**.
+ *
+ * @param {string} [orderNo] 기본 `202603162774427`
+ */
+function imwebDebugLogOrderToLogger(orderNo) {
+  var p = PropertiesService.getScriptProperties();
+  var uc = p.getProperty('IMWEB_UNIT_CODE') != null ? String(p.getProperty('IMWEB_UNIT_CODE')).trim() : '';
+  if (!uc.length) {
+    Logger.log('[imwebDebugLogOrderToLogger] IMWEB_UNIT_CODE 없음. site-info 또는 동기 후 Properties 확인.');
+    return;
+  }
+  var on =
+    orderNo != null && String(orderNo).trim() !== '' ? String(orderNo).trim() : '202603162774427';
+  var path = '/orders/' + encodeURIComponent(on);
+  var g = imwebTGetWithOpenSyncRetry_(path, { unitCode: uc });
+  Logger.log('[imwebDebugLogOrderToLogger] GET ' + path + '?unitCode=… http=' + g._http);
+  if (g._http !== 200) {
+    Logger.log(String(g._text != null ? g._text : '').slice(0, 4000));
+    return;
+  }
+  var j;
+  try {
+    j = JSON.parse(g._text || '{}');
+  } catch (e1) {
+    Logger.log('[imwebDebugLogOrderToLogger] JSON.parse 실패: ' + (e1 && e1.message != null ? e1.message : String(e1)));
+    return;
+  }
+  if (j.statusCode !== 200) {
+    Logger.log('[imwebDebugLogOrderToLogger] body statusCode!=' + 200 + ' raw=' + String(g._text).slice(0, 1500));
+    return;
+  }
+  var ord = j.data;
+  if (ord && Array.isArray(ord.list) && ord.list.length) {
+    ord = ord.list[0];
+  }
+  if (!ord || typeof ord !== 'object') {
+    Logger.log('[imwebDebugLogOrderToLogger] data 없음: ' + String(g._text).slice(0, 800));
+    return;
+  }
+  Logger.log(
+    '[order] orderNo=' +
+      String(ord.orderNo != null ? ord.orderNo : '') +
+      ' orderStatus=' +
+      String(ord.orderStatus != null ? ord.orderStatus : '') +
+      ' totalPaymentPrice=' +
+      String(ord.totalPaymentPrice != null ? ord.totalPaymentPrice : '') +
+      ' totalPrice=' +
+      String(ord.totalPrice != null ? ord.totalPrice : '')
+  );
+
+  function logObjKeys_(label, o) {
+    if (o == null || typeof o !== 'object') {
+      Logger.log(label + ' (null/비객체)');
+      return;
+    }
+    var keys = Object.keys(o).sort();
+    var ki;
+    for (ki = 0; ki < keys.length; ki++) {
+      var k = keys[ki];
+      var v = o[k];
+      var s = v != null && typeof v === 'object' ? JSON.stringify(v) : String(v);
+      if (s.length > 500) {
+        s = s.slice(0, 500) + '…';
+      }
+      Logger.log(label + '.' + k + '=' + s);
+    }
+  }
+
+  var secs = ord.sections;
+  if (!Array.isArray(secs)) {
+    Logger.log('[imwebDebugLogOrderToLogger] sections 없음');
+    return;
+  }
+  var sidx;
+  for (sidx = 0; sidx < secs.length; sidx++) {
+    var sec = secs[sidx] || {};
+    Logger.log('--- section[' + sidx + '] orderSectionStatus=' + String(sec.orderSectionStatus != null ? sec.orderSectionStatus : ''));
+    logObjKeys_('  cancelInfo', sec.cancelInfo);
+    logObjKeys_('  returnInfo', sec.returnInfo);
+    var its = sec.sectionItems;
+    if (!Array.isArray(its)) {
+      continue;
+    }
+    var ii;
+    for (ii = 0; ii < its.length; ii++) {
+      var it = its[ii] || {};
+      var pi = it.productInfo || {};
+      Logger.log(
+        '  sectionItem[' +
+          ii +
+          '] orderSectionItemNo=' +
+          String(it.orderSectionItemNo != null ? it.orderSectionItemNo : '') +
+          ' itemPrice(raw)=' +
+          String(pi.itemPrice != null ? pi.itemPrice : '') +
+          ' gradeDiscount=' +
+          String(it.gradeDiscount != null ? it.gradeDiscount : '') +
+          ' itemCouponDiscount=' +
+          String(it.itemCouponDiscount != null ? it.itemCouponDiscount : '') +
+          ' itemPointAmount=' +
+          String(it.itemPointAmount != null ? it.itemPointAmount : '') +
+          ' itemPromotionDiscount=' +
+          String(it.itemPromotionDiscount != null ? it.itemPromotionDiscount : '')
+      );
+      var mapped = dbMapOrderItemRowOpen_(ord, sec, it, '', 'debug');
+      var lp = dbNumO_(mapped[10]);
+      var lsale = dbNumO_(mapped[11]);
+      var lpt = dbNumO_(mapped[12]);
+      var lineNet = lp - lsale - lpt;
+      Logger.log(
+        '  → 시트 매핑: line_price[10]=' +
+          mapped[10] +
+          ' line_price_sale[11]=' +
+          mapped[11] +
+          ' line_point[12]=' +
+          mapped[12] +
+          ' line_coupon[13]=' +
+          mapped[13] +
+          ' claim_status[5]=' +
+          mapped[5] +
+          ' claim_event_time[7]=' +
+          mapped[7] +
+          ' | line_net(02식)=' +
+          lineNet
+      );
+    }
+  }
+  Logger.log('[imwebDebugLogOrderToLogger] 끝');
+}
