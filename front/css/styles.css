@@ -2187,10 +2187,34 @@ input.sp-confirm:disabled {
 }
 
 .sp-stu-date-editor__summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   cursor: pointer;
   font-weight: 700;
   color: #1d4e89;
   margin: 0.05rem 0;
+  padding-right: 0.1rem;
+}
+
+.sp-stu-date-editor__summary::-webkit-details-marker {
+  display: none;
+}
+
+.sp-stu-date-editor__summary::after {
+  content: '▸';
+  color: #3f5f82;
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.sp-stu-date-editor[open] .sp-stu-date-editor__summary::after {
+  content: '▾';
+}
+
+.sp-stu-date-editor__summary:hover {
+  color: #0f3f73;
 }
 
 .sp-stu-date-editor__lede {
