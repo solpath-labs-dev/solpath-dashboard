@@ -508,6 +508,15 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                 </p>
                 <div class="sp-stu-date-editor__toolbar">
                   <button type="button" class="btn btn--secondary" id="sp-stu-btnDateLoad">목록 불러오기</button>
+                  <label class="sp-stu-date-editor__filter">
+                    <span>카테고리 필터</span>
+                    <select id="sp-stu-dateFilterCat">
+                      <option value="">전체</option>
+                      <option value="solpass">솔패스</option>
+                      <option value="solutine">솔루틴</option>
+                      <option value="challenge">챌린지</option>
+                    </select>
+                  </label>
                 </div>
                 <p class="sp-pm__hint" id="sp-stu-dateHint" hidden></p>
                 <div class="sp-stu-date-editor__table-wrap">
@@ -518,18 +527,28 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                         <th>카테고리</th>
                         <th>상품</th>
                         <th>주문일</th>
-                        <th>시작일</th>
-                        <th>종료일</th>
+                        <th>
+                          <button type="button" class="sp-stu-sort-btn" data-sort-key="start">
+                            시작일 <span class="sp-stu-sort-btn__dir" data-sort-dir-for="start">-</span>
+                          </button>
+                        </th>
+                        <th>
+                          <button type="button" class="sp-stu-sort-btn" data-sort-key="end">
+                            종료일 <span class="sp-stu-sort-btn__dir" data-sort-dir-for="end">-</span>
+                          </button>
+                        </th>
                         <th>수정일</th>
-                        <th>저장</th>
                       </tr>
                     </thead>
                     <tbody id="sp-stu-dateTbody">
                       <tr>
-                        <td colspan="8" class="sp-stu-date-editor__empty">목록을 불러와 주세요.</td>
+                        <td colspan="7" class="sp-stu-date-editor__empty">목록을 불러와 주세요.</td>
                       </tr>
                     </tbody>
                   </table>
+                </div>
+                <div class="sp-stu-date-editor__toolbar">
+                  <button type="button" class="btn btn--primary" id="sp-stu-btnDateSaveAll">전체 수정 반영</button>
                 </div>
               </details>
             </div>

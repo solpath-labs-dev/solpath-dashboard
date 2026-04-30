@@ -85,6 +85,28 @@ function ymdFromDateTime_(v) {
   return s.slice(0, 10).replace(/[./]/g, '-');
 }
 
+const STU_CAT_LABEL = {
+  solpass: '솔패스',
+  solutine: '솔루틴',
+  challenge: '챌린지'
+};
+
+/** @type {Array<Record<string, string>>} */
+let _dateEditorRows = [];
+/** @type {'none'|'asc'|'desc'} */
+let _dateSortStart = 'none';
+/** @type {'none'|'asc'|'desc'} */
+let _dateSortEnd = 'none';
+
+/**
+ * @param {string} c
+ * @returns {string}
+ */
+function stuCatLabel_(c) {
+  const k = String(c || '').trim().toLowerCase();
+  return STU_CAT_LABEL[k] || k || '-';
+}
+
 /**
  * @param {HTMLElement | null} mount
  * @param {boolean} busy
@@ -162,6 +184,9 @@ export function initStudentMgmt(mount) {
   const btnInit = /** @type {HTMLButtonElement | null} */ (mount && mount.querySelector('#sp-stu-btnInit'));
   const btnRefresh = /** @type {HTMLButtonElement | null} */ (mount && mount.querySelector('#sp-stu-btnRefresh'));
   const btnDateLoad = /** @type {HTMLButtonElement | null} */ (mount && mount.querySelector('#sp-stu-btnDateLoad'));
+  const btnDateSaveAll = /** @type {HTMLButtonElement | null} */ (mount && mount.querySelector('#sp-stu-btnDateSaveAll'));
+  const filterCat = /** @type {HTMLSelectElement | null} */ (mount && mount.querySelector('#sp-stu-dateFilterCat'));
+  const sortBtns = mount ? Array.from(mount.querySelectorAll('.sp-stu-sort-btn')) : [];
   if (!mount) {
     return;
   }
@@ -174,6 +199,9 @@ export function initStudentMgmt(mount) {
     }
     if (btnDateLoad) {
       btnDateLoad.disabled = true;
+    }
+    if (btnDateSaveAll) {
+      btnDateSaveAll.disabled = true;
     }
     applyStudentMgmtStateFromData(mount, {});
     return;
@@ -196,6 +224,33 @@ export function initStudentMgmt(mount) {
       void loadDateEditorList_(mount);
     });
   }
+  if (btnDateSaveAll) {
+    btnDateSaveAll.disabled = false;
+    btnDateSaveAll.addEventListener('click', function () {
+      void saveDateEditorAll_(mount);
+    });
+  }
+  if (filterCat) {
+    filterCat.addEventListener('change', function () {
+      renderDateEditorRows_(mount);
+    });
+  }
+  sortBtns.forEach(function (btnEl) {
+    if (!(btnEl instanceof HTMLButtonElement)) {
+      return;
+    }
+    btnEl.addEventListener('click', function () {
+      const k = String(btnEl.getAttribute('data-sort-key') || '');
+      if (k === 'start') {
+        _dateSortStart = _dateSortStart === 'none' ? 'asc' : _dateSortStart === 'asc' ? 'desc' : 'none';
+        _dateSortEnd = 'none';
+      } else if (k === 'end') {
+        _dateSortEnd = _dateSortEnd === 'none' ? 'asc' : _dateSortEnd === 'asc' ? 'desc' : 'none';
+        _dateSortStart = 'none';
+      }
+      renderDateEditorRows_(mount);
+    });
+  });
 }
 
 /**
@@ -303,15 +358,71 @@ function setDateEditorHint_(mount, msg, show) {
 
 /**
  * @param {HTMLElement | null} mount
- * @param {Array<Record<string, string>>} rows
+ * @param {HTMLElement | null} mount
+ * @returns {Array<Record<string, string>>}
  */
-function renderDateEditorRows_(mount, rows) {
+function getDateEditorViewRows_(mount) {
+  const sel = /** @type {HTMLSelectElement | null} */ (mount && mount.querySelector('#sp-stu-dateFilterCat'));
+  const catFilter = sel ? String(sel.value || '').trim().toLowerCase() : '';
+  let rows = _dateEditorRows.slice();
+  if (catFilter) {
+    rows = rows.filter(function (r) {
+      return String(r.internalCategory || '').trim().toLowerCase() === catFilter;
+    });
+  }
+  const cmpDate = function (a, b, key) {
+    const av = ymdFromDateTime_(String(a[key] || ''));
+    const bv = ymdFromDateTime_(String(b[key] || ''));
+    return av.localeCompare(bv);
+  };
+  rows.sort(function (a, b) {
+    if (_dateSortStart !== 'none') {
+      const c1 = cmpDate(a, b, 'productStartDate');
+      if (c1 !== 0) {
+        return _dateSortStart === 'asc' ? c1 : -c1;
+      }
+    } else if (_dateSortEnd !== 'none') {
+      const c2 = cmpDate(a, b, 'productEndDate');
+      if (c2 !== 0) {
+        return _dateSortEnd === 'asc' ? c2 : -c2;
+      }
+    }
+    const ac = String(a.internalCategory || '');
+    const bc = String(b.internalCategory || '');
+    if (ac !== bc) {
+      return ac.localeCompare(bc);
+    }
+    return String(a.memberName || '').localeCompare(String(b.memberName || ''));
+  });
+  return rows;
+}
+
+/**
+ * @param {HTMLElement | null} mount
+ */
+function applyDateEditorSortIndicators_(mount) {
+  const startEl = /** @type {HTMLElement | null} */ (mount && mount.querySelector('[data-sort-dir-for="start"]'));
+  const endEl = /** @type {HTMLElement | null} */ (mount && mount.querySelector('[data-sort-dir-for="end"]'));
+  if (startEl) {
+    startEl.textContent = _dateSortStart === 'asc' ? '▲' : _dateSortStart === 'desc' ? '▼' : '-';
+  }
+  if (endEl) {
+    endEl.textContent = _dateSortEnd === 'asc' ? '▲' : _dateSortEnd === 'desc' ? '▼' : '-';
+  }
+}
+
+/**
+ * @param {HTMLElement | null} mount
+ */
+function renderDateEditorRows_(mount) {
   const tbody = /** @type {HTMLElement | null} */ (mount && mount.querySelector('#sp-stu-dateTbody'));
   if (!tbody) {
     return;
   }
+  const rows = getDateEditorViewRows_(mount);
+  applyDateEditorSortIndicators_(mount);
   if (!rows || !rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="sp-stu-date-editor__empty">표시할 항목이 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="sp-stu-date-editor__empty">표시할 항목이 없습니다.</td></tr>';
     return;
   }
   tbody.innerHTML = '';
@@ -325,13 +436,12 @@ function renderDateEditorRows_(mount, rows) {
     tr.setAttribute('data-orig-end', endYmd);
     tr.innerHTML =
       `<td>${String(r.memberName || '')}</td>` +
-      `<td>${String(r.internalCategory || '')}</td>` +
+      `<td><span class="sp-stu-cat-badge sp-stu-cat-badge--${String(r.internalCategory || '').trim().toLowerCase()}">${stuCatLabel_(String(r.internalCategory || ''))}</span></td>` +
       `<td>${String(r.prodName || '')}</td>` +
-      `<td>${String(r.orderTime || '')}</td>` +
+      `<td class="sp-stu-date-order-time">${String(r.orderTime || '')}</td>` +
       `<td><input type="date" class="sp-stu-date-start" value="${startYmd}" /></td>` +
       `<td><input type="date" class="sp-stu-date-end" value="${endYmd}" /></td>` +
-      `<td class="sp-stu-date-updated">${String(r.updatedAt || '')}</td>` +
-      `<td><button type="button" class="btn btn--primary sp-stu-date-save">저장</button></td>`;
+      `<td class="sp-stu-date-updated">${String(r.updatedAt || '')}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -355,11 +465,15 @@ async function loadDateEditorList_(mount) {
             ? String(r.message)
             : '목록을 불러오지 못했습니다.';
       setDateEditorHint_(mount, em, true);
-      renderDateEditorRows_(mount, []);
+      _dateEditorRows = [];
+      renderDateEditorRows_(mount);
       return;
     }
     const rows = r.data && Array.isArray(r.data.rows) ? r.data.rows : [];
-    renderDateEditorRows_(mount, rows);
+    _dateEditorRows = rows;
+    _dateSortStart = 'none';
+    _dateSortEnd = 'none';
+    renderDateEditorRows_(mount);
   } catch (e) {
     setDateEditorHint_(mount, e && e.message != null ? String(e.message) : '요청 실패', true);
   }
@@ -367,57 +481,67 @@ async function loadDateEditorList_(mount) {
 
 /**
  * @param {HTMLElement | null} mount
- * @param {HTMLTableRowElement} tr
+ * @returns {Array<Record<string, string|boolean>>}
  */
-async function saveDateEditorRow_(mount, tr) {
-  const url = String(GAS_BASE_URL).trim();
-  if (!url || !mount) {
-    return;
+function collectDateEditorChangedRows_(mount) {
+  const tbody = /** @type {HTMLElement | null} */ (mount && mount.querySelector('#sp-stu-dateTbody'));
+  if (!tbody) {
+    return [];
   }
-  const startInput = /** @type {HTMLInputElement|null} */ (tr.querySelector('.sp-stu-date-start'));
-  const endInput = /** @type {HTMLInputElement|null} */ (tr.querySelector('.sp-stu-date-end'));
-  const saveBtn = /** @type {HTMLButtonElement|null} */ (tr.querySelector('.sp-stu-date-save'));
-  const orderItemCode = String(tr.getAttribute('data-order-item-code') || '');
-  const origStart = String(tr.getAttribute('data-orig-start') || '');
-  const origEnd = String(tr.getAttribute('data-orig-end') || '');
-  const nextStart = startInput ? String(startInput.value || '').trim() : '';
-  const nextEnd = endInput ? String(endInput.value || '').trim() : '';
-  const changedStart = nextStart !== origStart;
-  const changedEnd = nextEnd !== origEnd;
-  if (!changedStart && !changedEnd) {
-    setDateEditorHint_(mount, '변경된 값이 없습니다.', true);
-    return;
-  }
-  const payload = {
-    orderItemCode: orderItemCode,
-    productStartDate: nextStart,
-    productEndDate: nextEnd,
-    changedStart: changedStart,
-    changedEnd: changedEnd
-  };
-  if (saveBtn) {
-    saveBtn.disabled = true;
-  }
-  try {
-    const r = await gasJsonpWithParams_(
-      url,
-      'studentMgmtDateEditorSave',
-      { payload: JSON.stringify(payload) },
-      120000
-    );
-    if (!r || !r.ok) {
-      const em =
-        r && r.error && r.error.message
-          ? String(r.error.message)
-          : r && r.message
-            ? String(r.message)
-            : '저장하지 못했습니다.';
-      setDateEditorHint_(mount, em, true);
+  const trs = Array.from(tbody.querySelectorAll('tr'));
+  const out = [];
+  trs.forEach(function (row) {
+    if (!(row instanceof HTMLTableRowElement)) {
       return;
     }
-    const d = r.data || {};
-    const savedStart = ymdFromDateTime_(String(d.productStartDate || nextStart));
-    const savedEnd = ymdFromDateTime_(String(d.productEndDate || nextEnd));
+    const startInput = /** @type {HTMLInputElement|null} */ (row.querySelector('.sp-stu-date-start'));
+    const endInput = /** @type {HTMLInputElement|null} */ (row.querySelector('.sp-stu-date-end'));
+    const orderItemCode = String(row.getAttribute('data-order-item-code') || '');
+    if (!orderItemCode.length) {
+      return;
+    }
+    const origStart = String(row.getAttribute('data-orig-start') || '');
+    const origEnd = String(row.getAttribute('data-orig-end') || '');
+    const nextStart = startInput ? String(startInput.value || '').trim() : '';
+    const nextEnd = endInput ? String(endInput.value || '').trim() : '';
+    const changedStart = nextStart !== origStart;
+    const changedEnd = nextEnd !== origEnd;
+    if (!changedStart && !changedEnd) {
+      return;
+    }
+    out.push({
+      orderItemCode: orderItemCode,
+      productStartDate: nextStart,
+      productEndDate: nextEnd,
+      changedStart: changedStart,
+      changedEnd: changedEnd
+    });
+  });
+  return out;
+}
+
+/**
+ * @param {HTMLElement | null} mount
+ * @param {Array<Record<string, string>>} savedRows
+ */
+function applyDateEditorSavedRows_(mount, savedRows) {
+  const tbody = /** @type {HTMLElement | null} */ (mount && mount.querySelector('#sp-stu-dateTbody'));
+  if (!tbody || !savedRows || !savedRows.length) {
+    return;
+  }
+  savedRows.forEach(function (d) {
+    const code = String(d.orderItemCode || '');
+    if (!code) {
+      return;
+    }
+    const tr = tbody.querySelector(`tr[data-order-item-code="${code}"]`);
+    if (!(tr instanceof HTMLTableRowElement)) {
+      return;
+    }
+    const startInput = /** @type {HTMLInputElement|null} */ (tr.querySelector('.sp-stu-date-start'));
+    const endInput = /** @type {HTMLInputElement|null} */ (tr.querySelector('.sp-stu-date-end'));
+    const savedStart = ymdFromDateTime_(String(d.productStartDate || ''));
+    const savedEnd = ymdFromDateTime_(String(d.productEndDate || ''));
     if (startInput) {
       startInput.value = savedStart;
     }
@@ -430,12 +554,64 @@ async function saveDateEditorRow_(mount, tr) {
     if (up) {
       up.textContent = String(d.updatedAt || '');
     }
-    setDateEditorHint_(mount, '저장했습니다.', true);
+    const code0 = String(d.orderItemCode || '');
+    _dateEditorRows = _dateEditorRows.map(function (x) {
+      if (String(x.orderItemCode || '') !== code0) {
+        return x;
+      }
+      return {
+        ...x,
+        productStartDate: String(d.productStartDate || x.productStartDate || ''),
+        productEndDate: String(d.productEndDate || x.productEndDate || ''),
+        updatedAt: String(d.updatedAt || x.updatedAt || '')
+      };
+    });
+  });
+  renderDateEditorRows_(mount);
+}
+
+/**
+ * @param {HTMLElement | null} mount
+ */
+async function saveDateEditorAll_(mount) {
+  const url = String(GAS_BASE_URL).trim();
+  const btnDateSaveAll = /** @type {HTMLButtonElement | null} */ (mount && mount.querySelector('#sp-stu-btnDateSaveAll'));
+  if (!url || !mount) {
+    return;
+  }
+  const changedRows = collectDateEditorChangedRows_(mount);
+  if (!changedRows.length) {
+    setDateEditorHint_(mount, '변경된 값이 없습니다.', true);
+    return;
+  }
+  if (btnDateSaveAll) {
+    btnDateSaveAll.disabled = true;
+  }
+  try {
+    const r = await gasJsonpWithParams_(
+      url,
+      'studentMgmtDateEditorSaveBatch',
+      { payload: JSON.stringify({ rows: changedRows }) },
+      180000
+    );
+    if (!r || !r.ok) {
+      const em =
+        r && r.error && r.error.message
+          ? String(r.error.message)
+          : r && r.message
+            ? String(r.message)
+            : '저장하지 못했습니다.';
+      setDateEditorHint_(mount, em, true);
+      return;
+    }
+    const rows = r.data && Array.isArray(r.data.rows) ? r.data.rows : [];
+    applyDateEditorSavedRows_(mount, rows);
+    setDateEditorHint_(mount, '전체 수정 반영 완료', true);
   } catch (e) {
     setDateEditorHint_(mount, e && e.message != null ? String(e.message) : '요청 실패', true);
   } finally {
-    if (saveBtn) {
-      saveBtn.disabled = false;
+    if (btnDateSaveAll) {
+      btnDateSaveAll.disabled = false;
     }
   }
 }
@@ -444,22 +620,5 @@ async function saveDateEditorRow_(mount, tr) {
  * @param {HTMLElement | null} mount
  */
 export function studentMgmtOnTabActivate(mount) {
-  const tbody = /** @type {HTMLElement | null} */ (mount && mount.querySelector('#sp-stu-dateTbody'));
-  if (tbody && !tbody.getAttribute('data-wired')) {
-    tbody.setAttribute('data-wired', '1');
-    tbody.addEventListener('click', function (ev) {
-      const t = ev.target;
-      if (!(t instanceof HTMLElement)) {
-        return;
-      }
-      if (!t.classList.contains('sp-stu-date-save')) {
-        return;
-      }
-      const tr = t.closest('tr');
-      if (tr instanceof HTMLTableRowElement) {
-        void saveDateEditorRow_(mount, tr);
-      }
-    });
-  }
   void refreshStudentPanel_(mount);
 }

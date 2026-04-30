@@ -464,6 +464,13 @@ function dbStudentMgmtDateEditorList_() {
     if (!dbStuIsAllowedCategory_(cat)) {
       continue;
     }
+    if (cat === 'jasoseo') {
+      continue;
+    }
+    var claimStatus = String(r[evIdx.claim_status] != null ? r[evIdx.claim_status] : '').trim().toLowerCase();
+    if (claimStatus === 'cancel') {
+      continue;
+    }
     var endRaw = r[evIdx.product_end_date];
     if (String(endRaw != null ? endRaw : '').trim().length) {
       var endDt = dbStuDateFromAny_(endRaw);
@@ -608,6 +615,29 @@ function dbStudentMgmtDateEditorSave_(payload) {
       updatedAt: nowIso
     }
   };
+}
+
+/**
+ * @param {Object} payload
+ * @return {{ ok: true, data: { saved: number, rows: Object[] } }|{ ok: false, error: { code: string, message: string } }}
+ */
+function dbStudentMgmtDateEditorSaveBatch_(payload) {
+  payload = payload || {};
+  var rows = Array.isArray(payload.rows) ? payload.rows : [];
+  if (!rows.length) {
+    return { ok: false, error: { code: 'BAD_REQUEST', message: 'rows가 비어 있습니다.' } };
+  }
+  var out = [];
+  var i;
+  for (i = 0; i < rows.length; i++) {
+    var one = rows[i] || {};
+    var r = dbStudentMgmtDateEditorSave_(one);
+    if (!r || !r.ok) {
+      return r || { ok: false, error: { code: 'SAVE_FAILED', message: '저장 실패' } };
+    }
+    out.push(r.data || {});
+  }
+  return { ok: true, data: { saved: out.length, rows: out } };
 }
 
 /**

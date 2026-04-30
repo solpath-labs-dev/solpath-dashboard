@@ -2200,7 +2200,27 @@ input.sp-confirm:disabled {
 }
 
 .sp-stu-date-editor__toolbar {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  align-items: center;
   margin: 0 0 0.55rem;
+}
+
+.sp-stu-date-editor__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: calc(0.8rem + var(--sp-text-bump));
+  color: #324152;
+}
+
+.sp-stu-date-editor__filter select {
+  font: inherit;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid #cfd6de;
+  border-radius: 6px;
+  background: #fff;
 }
 
 .sp-stu-date-editor__table-wrap {
@@ -2229,12 +2249,58 @@ input.sp-confirm:disabled {
   white-space: nowrap;
 }
 
+.sp-stu-sort-btn {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: #1f2d3a;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sp-stu-sort-btn__dir {
+  color: #4b6b8d;
+  font-weight: 700;
+}
+
 .sp-stu-date-editor__table input[type='date'] {
-  width: 9.3rem;
+  width: 11.8rem;
   font: inherit;
   padding: 0.2rem 0.25rem;
   border: 1px solid #cfd6de;
   border-radius: 6px;
+}
+
+.sp-stu-date-order-time {
+  width: 6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-stu-cat-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: calc(0.74rem + var(--sp-text-bump));
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.sp-stu-cat-badge--solpass {
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+
+.sp-stu-cat-badge--solutine {
+  background: #ede7f6;
+  color: #4527a0;
+}
+
+.sp-stu-cat-badge--challenge {
+  background: #fff8e1;
+  color: #8d6e00;
 }
 
 .sp-stu-date-editor__empty {

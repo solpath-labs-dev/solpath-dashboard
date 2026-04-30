@@ -113,6 +113,7 @@ function openSyncAllowedActions_() {
     'studentMgmtRebuildFromMaster',
     'studentMgmtDateEditorList',
     'studentMgmtDateEditorSave',
+    'studentMgmtDateEditorSaveBatch',
     'analyticsExportStagingPut',
     'analyticsTableExportFromStaging'
   ];
@@ -329,6 +330,13 @@ function openSyncRouteAction_(action, e) {
       return { ok: false, error: { code: 'BAD_REQUEST', message: 'payload 없음' } };
     }
     return dbStudentMgmtDateEditorSave_(pStuSave);
+  }
+  if (action === 'studentMgmtDateEditorSaveBatch') {
+    var pStuSaveB = openSyncExtractPayloadJson_(e);
+    if (!pStuSaveB) {
+      return { ok: false, error: { code: 'BAD_REQUEST', message: 'payload 없음' } };
+    }
+    return dbStudentMgmtDateEditorSaveBatch_(pStuSaveB);
   }
   return { ok: false, error: 'UNKNOWN_ACTION', allowed: openSyncAllowedActions_() };
 }
