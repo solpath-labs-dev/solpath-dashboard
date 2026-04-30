@@ -108,6 +108,7 @@ var DB_STUDENT_ORDER_EVENT_HEADERS = [
   'options_raw',
   'options_count',
   'row_json',
+  'updated_at',
   'fetched_at',
   'source_sync_id'
 ];

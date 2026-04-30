@@ -7,6 +7,17 @@ import { GAS_BASE_URL, GAS_MODE } from './config.js';
  * @returns {Promise<Object>}
  */
 function gasJsonp_(baseUrl, action, timeoutMs) {
+  return gasJsonpWithParams_(baseUrl, action, null, timeoutMs);
+}
+
+/**
+ * @param {string} baseUrl
+ * @param {string} action
+ * @param {Object<string, string>|null} extraParams
+ * @param {number} timeoutMs
+ * @returns {Promise<Object>}
+ */
+function gasJsonpWithParams_(baseUrl, action, extraParams, timeoutMs) {
   return new Promise(function (resolve, reject) {
     const cb =
       '_solpath_jp_' + String(Date.now()) + '_' + String(Math.floor(Math.random() * 1e9));
@@ -43,6 +54,11 @@ function gasJsonp_(baseUrl, action, timeoutMs) {
     u.searchParams.set('format', 'jsonp');
     u.searchParams.set('callback', cb);
     u.searchParams.set('action', action);
+    if (extraParams) {
+      Object.keys(extraParams).forEach(function (k) {
+        u.searchParams.set(k, extraParams[k]);
+      });
+    }
     s.async = true;
     s.src = u.toString();
     s.onerror = function () {
@@ -51,6 +67,22 @@ function gasJsonp_(baseUrl, action, timeoutMs) {
     };
     document.head.appendChild(s);
   });
+}
+
+/**
+ * @param {string} v
+ * @returns {string}
+ */
+function ymdFromDateTime_(v) {
+  const s = String(v != null ? v : '').trim();
+  if (!s) {
+    return '';
+  }
+  const m = s.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+  if (m) {
+    return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+  }
+  return s.slice(0, 10).replace(/[./]/g, '-');
 }
 
 /**
@@ -129,6 +161,7 @@ export function applyStudentMgmtStateFromData(mount, d) {
 export function initStudentMgmt(mount) {
   const btnInit = /** @type {HTMLButtonElement | null} */ (mount && mount.querySelector('#sp-stu-btnInit'));
   const btnRefresh = /** @type {HTMLButtonElement | null} */ (mount && mount.querySelector('#sp-stu-btnRefresh'));
+  const btnDateLoad = /** @type {HTMLButtonElement | null} */ (mount && mount.querySelector('#sp-stu-btnDateLoad'));
   if (!mount) {
     return;
   }
@@ -138,6 +171,9 @@ export function initStudentMgmt(mount) {
     }
     if (btnRefresh) {
       btnRefresh.disabled = true;
+    }
+    if (btnDateLoad) {
+      btnDateLoad.disabled = true;
     }
     applyStudentMgmtStateFromData(mount, {});
     return;
@@ -152,6 +188,12 @@ export function initStudentMgmt(mount) {
     btnRefresh.disabled = false;
     btnRefresh.addEventListener('click', function () {
       void refreshStudentPanel_(mount);
+    });
+  }
+  if (btnDateLoad) {
+    btnDateLoad.disabled = false;
+    btnDateLoad.addEventListener('click', function () {
+      void loadDateEditorList_(mount);
     });
   }
 }
@@ -243,7 +285,181 @@ async function onInitClick_(mount) {
 
 /**
  * @param {HTMLElement | null} mount
+ * @param {string} msg
+ * @param {boolean} show
+ */
+function setDateEditorHint_(mount, msg, show) {
+  const hint = /** @type {HTMLElement | null} */ (mount && mount.querySelector('#sp-stu-dateHint'));
+  if (!hint) {
+    return;
+  }
+  hint.textContent = msg || '';
+  if (show) {
+    hint.removeAttribute('hidden');
+  } else {
+    hint.setAttribute('hidden', '');
+  }
+}
+
+/**
+ * @param {HTMLElement | null} mount
+ * @param {Array<Record<string, string>>} rows
+ */
+function renderDateEditorRows_(mount, rows) {
+  const tbody = /** @type {HTMLElement | null} */ (mount && mount.querySelector('#sp-stu-dateTbody'));
+  if (!tbody) {
+    return;
+  }
+  if (!rows || !rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="sp-stu-date-editor__empty">표시할 항목이 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
+  rows.forEach(function (r) {
+    const tr = document.createElement('tr');
+    const orderItemCode = String(r.orderItemCode || '');
+    const startYmd = ymdFromDateTime_(String(r.productStartDate || ''));
+    const endYmd = ymdFromDateTime_(String(r.productEndDate || ''));
+    tr.setAttribute('data-order-item-code', orderItemCode);
+    tr.setAttribute('data-orig-start', startYmd);
+    tr.setAttribute('data-orig-end', endYmd);
+    tr.innerHTML =
+      `<td>${String(r.memberName || '')}</td>` +
+      `<td>${String(r.internalCategory || '')}</td>` +
+      `<td>${String(r.prodName || '')}</td>` +
+      `<td>${String(r.orderTime || '')}</td>` +
+      `<td><input type="date" class="sp-stu-date-start" value="${startYmd}" /></td>` +
+      `<td><input type="date" class="sp-stu-date-end" value="${endYmd}" /></td>` +
+      `<td class="sp-stu-date-updated">${String(r.updatedAt || '')}</td>` +
+      `<td><button type="button" class="btn btn--primary sp-stu-date-save">저장</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/**
+ * @param {HTMLElement | null} mount
+ */
+async function loadDateEditorList_(mount) {
+  const url = String(GAS_BASE_URL).trim();
+  if (!url || !mount) {
+    return;
+  }
+  setDateEditorHint_(mount, '', false);
+  try {
+    const r = await gasJsonp_(url, 'studentMgmtDateEditorList', 120000);
+    if (!r || !r.ok) {
+      const em =
+        r && r.error && r.error.message
+          ? String(r.error.message)
+          : r && r.message
+            ? String(r.message)
+            : '목록을 불러오지 못했습니다.';
+      setDateEditorHint_(mount, em, true);
+      renderDateEditorRows_(mount, []);
+      return;
+    }
+    const rows = r.data && Array.isArray(r.data.rows) ? r.data.rows : [];
+    renderDateEditorRows_(mount, rows);
+  } catch (e) {
+    setDateEditorHint_(mount, e && e.message != null ? String(e.message) : '요청 실패', true);
+  }
+}
+
+/**
+ * @param {HTMLElement | null} mount
+ * @param {HTMLTableRowElement} tr
+ */
+async function saveDateEditorRow_(mount, tr) {
+  const url = String(GAS_BASE_URL).trim();
+  if (!url || !mount) {
+    return;
+  }
+  const startInput = /** @type {HTMLInputElement|null} */ (tr.querySelector('.sp-stu-date-start'));
+  const endInput = /** @type {HTMLInputElement|null} */ (tr.querySelector('.sp-stu-date-end'));
+  const saveBtn = /** @type {HTMLButtonElement|null} */ (tr.querySelector('.sp-stu-date-save'));
+  const orderItemCode = String(tr.getAttribute('data-order-item-code') || '');
+  const origStart = String(tr.getAttribute('data-orig-start') || '');
+  const origEnd = String(tr.getAttribute('data-orig-end') || '');
+  const nextStart = startInput ? String(startInput.value || '').trim() : '';
+  const nextEnd = endInput ? String(endInput.value || '').trim() : '';
+  const changedStart = nextStart !== origStart;
+  const changedEnd = nextEnd !== origEnd;
+  if (!changedStart && !changedEnd) {
+    setDateEditorHint_(mount, '변경된 값이 없습니다.', true);
+    return;
+  }
+  const payload = {
+    orderItemCode: orderItemCode,
+    productStartDate: nextStart,
+    productEndDate: nextEnd,
+    changedStart: changedStart,
+    changedEnd: changedEnd
+  };
+  if (saveBtn) {
+    saveBtn.disabled = true;
+  }
+  try {
+    const r = await gasJsonpWithParams_(
+      url,
+      'studentMgmtDateEditorSave',
+      { payload: JSON.stringify(payload) },
+      120000
+    );
+    if (!r || !r.ok) {
+      const em =
+        r && r.error && r.error.message
+          ? String(r.error.message)
+          : r && r.message
+            ? String(r.message)
+            : '저장하지 못했습니다.';
+      setDateEditorHint_(mount, em, true);
+      return;
+    }
+    const d = r.data || {};
+    const savedStart = ymdFromDateTime_(String(d.productStartDate || nextStart));
+    const savedEnd = ymdFromDateTime_(String(d.productEndDate || nextEnd));
+    if (startInput) {
+      startInput.value = savedStart;
+    }
+    if (endInput) {
+      endInput.value = savedEnd;
+    }
+    tr.setAttribute('data-orig-start', savedStart);
+    tr.setAttribute('data-orig-end', savedEnd);
+    const up = tr.querySelector('.sp-stu-date-updated');
+    if (up) {
+      up.textContent = String(d.updatedAt || '');
+    }
+    setDateEditorHint_(mount, '저장했습니다.', true);
+  } catch (e) {
+    setDateEditorHint_(mount, e && e.message != null ? String(e.message) : '요청 실패', true);
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+    }
+  }
+}
+
+/**
+ * @param {HTMLElement | null} mount
  */
 export function studentMgmtOnTabActivate(mount) {
+  const tbody = /** @type {HTMLElement | null} */ (mount && mount.querySelector('#sp-stu-dateTbody'));
+  if (tbody && !tbody.getAttribute('data-wired')) {
+    tbody.setAttribute('data-wired', '1');
+    tbody.addEventListener('click', function (ev) {
+      const t = ev.target;
+      if (!(t instanceof HTMLElement)) {
+        return;
+      }
+      if (!t.classList.contains('sp-stu-date-save')) {
+        return;
+      }
+      const tr = t.closest('tr');
+      if (tr instanceof HTMLTableRowElement) {
+        void saveDateEditorRow_(mount, tr);
+      }
+    });
+  }
   void refreshStudentPanel_(mount);
 }

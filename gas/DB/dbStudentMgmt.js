@@ -3,6 +3,104 @@
  * 원천 `order_items`·`orders`·`members`·`product_mapping` 읽기 → 이벤트·마스터 전면 재구축.
  */
 
+/** 원천에 그대로 있어도 수강생 이벤트에 올리지 않음 — 키: `order_item_code` */
+var DB_STU_FORCE_SKIP_ORDER_ITEM_CODES_ = {
+  oi20260221610510d93a19c: true
+};
+
+/**
+ * 원천에 없는 특이 케이스 고정 이벤트(리빌드 시 항상 병합).
+ * 날짜 입력은 `yyyy.MM.dd`/`yyyy-MM-dd`/`yyyy/MM/dd` 모두 허용.
+ */
+var DB_STU_FIXED_MANUAL_EVENTS_ = [
+  {
+    manual_key: 'fixed_hongboyoung_20260209_challenge',
+    member_code: '',
+    name: '홍보영',
+    internal_category: 'challenge',
+    lifecycle: 'active',
+    order_time: '2026.02.09',
+    product_start_date: '2026.02.09',
+    product_end_date: '2026.02.14',
+    order_status: 'closed',
+    section_status: 'PURCHASE_CONFIRMATION',
+    prod_no: '79',
+    prod_name: '일주일 만에 영어 노베이스 탈출하기 챌린지'
+  },
+  {
+    manual_key: 'fixed_kimtaeyun_20260209_challenge',
+    member_code: 'm2026020743093367f2541',
+    name: '김태윤',
+    internal_category: 'challenge',
+    lifecycle: 'active',
+    order_time: '2026.02.09',
+    product_start_date: '2026.02.09',
+    product_end_date: '2026.02.14',
+    order_status: 'closed',
+    section_status: 'PURCHASE_CONFIRMATION',
+    prod_no: '79',
+    prod_name: '일주일 만에 영어 노베이스 탈출하기 챌린지'
+  },
+  {
+    manual_key: 'fixed_leeminje_20260209_challenge',
+    member_code: 'm20260209d1920f53cc5da',
+    name: '이민제',
+    internal_category: 'challenge',
+    lifecycle: 'active',
+    order_time: '2026.02.09',
+    product_start_date: '2026.02.09',
+    product_end_date: '2026.02.14',
+    order_status: 'closed',
+    section_status: 'PURCHASE_CONFIRMATION',
+    prod_no: '79',
+    prod_name: '일주일 만에 영어 노베이스 탈출하기 챌린지'
+  },
+  {
+    manual_key: 'fixed_hwangseoyoung_20260209_challenge',
+    member_code: 'm202602090b4074ae8656d',
+    name: '황서영',
+    internal_category: 'challenge',
+    lifecycle: 'active',
+    order_time: '2026.02.09',
+    product_start_date: '2026.02.09',
+    product_end_date: '2026.02.14',
+    order_status: 'closed',
+    section_status: 'PURCHASE_CONFIRMATION',
+    prod_no: '79',
+    prod_name: '일주일 만에 영어 노베이스 탈출하기 챌린지'
+  }
+];
+
+/**
+ * @param {*} input
+ * @param {boolean} endOfDay
+ * @return {string}
+ */
+function dbStuNormalizeManualDateTime_(input, endOfDay) {
+  var s = input != null ? String(input).trim() : '';
+  if (!s.length) {
+    return '';
+  }
+  var m = s.match(/^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})$/);
+  if (m) {
+    var y = parseInt(m[1], 10);
+    var mo = parseInt(m[2], 10);
+    var d = parseInt(m[3], 10);
+    if (isFinite(y) && isFinite(mo) && isFinite(d)) {
+      var dt = new Date(y, mo - 1, d);
+      return (
+        Utilities.formatDate(dt, 'Asia/Seoul', 'yyyy-MM-dd') +
+        (endOfDay ? ' 23:59:59' : ' 00:00:00')
+      );
+    }
+  }
+  var ymd = s.slice(0, 10).replace(/[.\/]/g, '-');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    return ymd + (endOfDay ? ' 23:59:59' : ' 00:00:00');
+  }
+  return s;
+}
+
 /**
  * --- STUDENT `product_end_date` 기본 가산 일수 ---
  * 운영 정책이 바뀌면 **이 함수만** 고치면 됨. (스키마 문서와 주석을 함께 맞출 것.)
@@ -19,8 +117,12 @@ function dbStuDefaultDurationDaysForCategory_(internalCategory) {
   if (c === 'challenge') {
     return 14;
   }
-  if (c === 'solpass' || c === 'solutine') {
+  if (c === 'solpass') {
     return 28;
+  }
+  /** 솔루틴: 시작일 포함 26일(예: 4/6 시작 → 5/1 종료) — `dbStuEndDateFromStartYmd_` 와 동일 규칙 */
+  if (c === 'solutine') {
+    return 26;
   }
   return 28;
 }
@@ -45,7 +147,8 @@ function dbStuNextDayMidnightSeoulString_(orderTimeRaw) {
 }
 
 /**
- * 시작일 문자열 앞 10자(yyyy-MM-dd) 기준으로 N일 뒤 23:59:59 서울
+ * 시작일(날짜, 앞 10자 yyyy-MM-dd)을 **1일째로 포함**한 N일권의 **마지막 날** 23:59:59 서울.
+ * 예: 3/27 시작·28일권 → 3/27~4/23 → 종료 4/23 23:59:59 (시작 + (N-1)일).
  * @param {string} startCell
  * @param {number} nDays
  * @return {string}
@@ -64,7 +167,7 @@ function dbStuEndDateFromStartYmd_(startCell, nDays) {
   }
   var p = ymd.split('-');
   var dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
-  dt.setDate(dt.getDate() + nDays);
+  dt.setDate(dt.getDate() + (nDays - 1));
   return Utilities.formatDate(dt, 'Asia/Seoul', 'yyyy-MM-dd') + ' 23:59:59';
 }
 
@@ -150,7 +253,7 @@ function dbStudentStateFields_() {
 /**
  * 기존 이벤트 시트에서 `product_start_date`·`product_end_date` 만 보존 (order_item_code 키)
  * @param {GoogleAppsScript.Spreadsheet.Sheet} shE
- * @return {Object<string, {start: *, end: *}>}
+ * @return {Object<string, {start: *, end: *, updated: *}>}
  */
 function dbStuReadPreserveDates_(shE) {
   var out = {};
@@ -162,6 +265,7 @@ function dbStuReadPreserveDates_(shE) {
   var ixCode = -1;
   var ixStart = -1;
   var ixEnd = -1;
+  var ixUpdated = -1;
   var i;
   for (i = 0; i < hdr.length; i++) {
     var h = String(hdr[i] != null ? hdr[i] : '').trim();
@@ -173,6 +277,9 @@ function dbStuReadPreserveDates_(shE) {
     }
     if (h === 'product_end_date') {
       ixEnd = i;
+    }
+    if (h === 'updated_at') {
+      ixUpdated = i;
     }
   }
   if (ixCode < 0) {
@@ -189,10 +296,318 @@ function dbStuReadPreserveDates_(shE) {
     }
     out[code] = {
       start: ixStart >= 0 ? row[ixStart] : '',
-      end: ixEnd >= 0 ? row[ixEnd] : ''
+      end: ixEnd >= 0 ? row[ixEnd] : '',
+      updated: ixUpdated >= 0 ? row[ixUpdated] : ''
     };
   }
   return out;
+}
+
+/**
+ * @param {string} s
+ * @return {string}
+ */
+function dbStuNormalizeYmd_(s) {
+  var t = s != null ? String(s).trim() : '';
+  if (!t.length) {
+    return '';
+  }
+  var m = t.match(/^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);
+  if (m) {
+    var y = m[1];
+    var mo = ('0' + String(parseInt(m[2], 10))).slice(-2);
+    var d = ('0' + String(parseInt(m[3], 10))).slice(-2);
+    return y + '-' + mo + '-' + d;
+  }
+  var p = t.slice(0, 10).replace(/[.\/]/g, '-');
+  return /^\d{4}-\d{2}-\d{2}$/.test(p) ? p : '';
+}
+
+/**
+ * @param {*} v
+ * @return {Date|null}
+ */
+function dbStuDateFromAny_(v) {
+  var ymd = dbStuNormalizeYmd_(v != null ? String(v) : '');
+  if (!ymd) {
+    return null;
+  }
+  var p = ymd.split('-');
+  var dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+  return isFinite(dt.getTime()) ? dt : null;
+}
+
+/**
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sh
+ * @param {string[]} headers
+ * @return {Object}
+ */
+function dbStuHeaderIndexMap_(sh, headers) {
+  var out = {};
+  var w = headers.length;
+  var hdr = sh.getRange(1, 1, 1, w).getValues()[0];
+  var i;
+  for (i = 0; i < hdr.length; i++) {
+    out[String(hdr[i] != null ? hdr[i] : '').trim()] = i;
+  }
+  return out;
+}
+
+/**
+ * @param {Object<string, {start: *, end: *, updated: *}>} preserve
+ * @param {string} nowIso
+ * @param {string} batchId
+ * @return {{ rows: Array<Array<*>>, manualNameByMemberCode: Object<string, string> }}
+ */
+function dbStuBuildFixedManualRows_(preserve, nowIso, batchId) {
+  var rows = [];
+  var manualNameByMemberCode = {};
+  var i;
+  for (i = 0; i < DB_STU_FIXED_MANUAL_EVENTS_.length; i++) {
+    var m = DB_STU_FIXED_MANUAL_EVENTS_[i] || {};
+    var itemCode = 'manual_' + String(m.manual_key != null ? m.manual_key : '').trim();
+    if (!itemCode || itemCode === 'manual_') {
+      continue;
+    }
+    var memberCode = String(m.member_code != null ? m.member_code : '').trim();
+    var memberName = String(m.name != null ? m.name : '').trim();
+    if (memberCode.length && memberName.length) {
+      manualNameByMemberCode[memberCode] = memberName;
+    }
+    var pStart = dbStuNormalizeManualDateTime_(m.product_start_date, false);
+    var pEnd = dbStuNormalizeManualDateTime_(m.product_end_date, true);
+    var rowEv = [
+      itemCode,
+      'manual_' + String(i + 1),
+      memberCode,
+      dbStuNormalizeManualDateTime_(m.order_time, false),
+      String(m.internal_category != null ? m.internal_category : '').trim().toLowerCase() || 'challenge',
+      String(m.lifecycle != null ? m.lifecycle : '').trim().toLowerCase() || 'active',
+      pStart,
+      pEnd,
+      String(m.order_status != null ? m.order_status : '').trim() || 'closed',
+      String(m.section_status != null ? m.section_status : '').trim() || 'PURCHASE_CONFIRMATION',
+      '',
+      '',
+      '',
+      String(m.prod_no != null ? m.prod_no : '').trim(),
+      String(m.prod_name != null ? m.prod_name : '').trim(),
+      '',
+      '',
+      JSON.stringify({
+        source: 'manual_fixed',
+        manual_key: String(m.manual_key != null ? m.manual_key : ''),
+        name: memberName
+      }),
+      '',
+      nowIso,
+      batchId
+    ];
+    var prev = preserve[itemCode];
+    if (prev) {
+      if (prev.start !== '' && prev.start != null) {
+        rowEv[6] = prev.start;
+      }
+      if (prev.end !== '' && prev.end != null) {
+        rowEv[7] = prev.end;
+      }
+      if (prev.updated !== '' && prev.updated != null) {
+        rowEv[18] = prev.updated;
+      }
+    }
+    rows.push(rowEv);
+  }
+  return { rows: rows, manualNameByMemberCode: manualNameByMemberCode };
+}
+
+/**
+ * 수강 시작/종료일 편집 목록: (member_code, category)별 최신 1건만 반환.
+ * 종료일이 현재 기준 14일 초과 지난 건은 제외.
+ * @return {{ ok: true, data: { rows: Object[] } }|{ ok: false, error: { code: string, message: string } }}
+ */
+function dbStudentMgmtDateEditorList_() {
+  var ssStu = dbStuOpen_();
+  if (!ssStu) {
+    return { ok: false, error: { code: 'NO_STUDENT_SHEET', message: '수강생 DB가 없습니다.' } };
+  }
+  var shEv = ssStu.getSheetByName(DB_SHEET_STUDENT_ORDER_EVENTS);
+  var shM = ssStu.getSheetByName(DB_SHEET_STUDENT_MEMBER_MASTER);
+  if (!shEv || shEv.getLastRow() < 2) {
+    return { ok: true, data: { rows: [] } };
+  }
+  var evIdx = dbStuHeaderIndexMap_(shEv, DB_STUDENT_ORDER_EVENT_HEADERS);
+  var rows = shEv.getRange(2, 1, shEv.getLastRow() - 1, DB_STUDENT_ORDER_EVENT_HEADERS.length).getValues();
+  var nameByMemberCode = {};
+  if (shM && shM.getLastRow() >= 2) {
+    var mIdx = dbStuHeaderIndexMap_(shM, DB_STUDENT_MEMBER_HEADERS);
+    var mVals = shM.getRange(2, 1, shM.getLastRow() - 1, DB_STUDENT_MEMBER_HEADERS.length).getValues();
+    var mi;
+    for (mi = 0; mi < mVals.length; mi++) {
+      var mr = mVals[mi] || [];
+      var mc = String(mr[mIdx.member_code] != null ? mr[mIdx.member_code] : '').trim();
+      if (!mc.length) {
+        continue;
+      }
+      var nm = String(mr[mIdx.name] != null ? mr[mIdx.name] : '').trim();
+      if (nm.length) {
+        nameByMemberCode[mc] = nm;
+      }
+    }
+  }
+  var cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 14);
+  var bestByKey = {};
+  var i;
+  for (i = 0; i < rows.length; i++) {
+    var r = rows[i] || [];
+    var cat = String(r[evIdx.internal_category] != null ? r[evIdx.internal_category] : '').trim().toLowerCase();
+    if (!dbStuIsAllowedCategory_(cat)) {
+      continue;
+    }
+    var endRaw = r[evIdx.product_end_date];
+    if (String(endRaw != null ? endRaw : '').trim().length) {
+      var endDt = dbStuDateFromAny_(endRaw);
+      if (endDt && endDt.getTime() < cutoff.getTime()) {
+        continue;
+      }
+    }
+    var memberCode = String(r[evIdx.member_code] != null ? r[evIdx.member_code] : '').trim();
+    var itemCode = String(r[evIdx.order_item_code] != null ? r[evIdx.order_item_code] : '').trim();
+    if (!itemCode.length) {
+      continue;
+    }
+    var key = (memberCode.length ? memberCode : '__guest__' + itemCode) + '|' + cat;
+    var ot = String(r[evIdx.order_time] != null ? r[evIdx.order_time] : '').trim();
+    var otKey = dbStuNormalizeYmd_(ot) + '|' + ot;
+    var prev = bestByKey[key];
+    if (!prev || otKey > prev.orderTimeKey || (otKey === prev.orderTimeKey && itemCode > prev.orderItemCode)) {
+      var nm0 = memberCode.length && nameByMemberCode[memberCode] ? nameByMemberCode[memberCode] : '';
+      if (!nm0.length) {
+        nm0 = memberCode.length ? memberCode + '(비회원)' : '비회원';
+      }
+      bestByKey[key] = {
+        orderItemCode: itemCode,
+        memberCode: memberCode,
+        memberName: nm0,
+        internalCategory: cat,
+        orderTime: ot,
+        productStartDate: String(r[evIdx.product_start_date] != null ? r[evIdx.product_start_date] : ''),
+        productEndDate: String(r[evIdx.product_end_date] != null ? r[evIdx.product_end_date] : ''),
+        updatedAt: String(evIdx.updated_at >= 0 && r[evIdx.updated_at] != null ? r[evIdx.updated_at] : ''),
+        prodName: String(r[evIdx.prod_name] != null ? r[evIdx.prod_name] : ''),
+        orderTimeKey: otKey
+      };
+    }
+  }
+  var out = [];
+  var keys = Object.keys(bestByKey);
+  var ki;
+  for (ki = 0; ki < keys.length; ki++) {
+    var it = bestByKey[keys[ki]];
+    delete it.orderTimeKey;
+    out.push(it);
+  }
+  out.sort(function (a, b) {
+    var an = String(a.memberName || '');
+    var bn = String(b.memberName || '');
+    if (an !== bn) {
+      return an.localeCompare(bn);
+    }
+    var ac = String(a.internalCategory || '');
+    var bc = String(b.internalCategory || '');
+    if (ac !== bc) {
+      return ac.localeCompare(bc);
+    }
+    return String(b.orderTime || '').localeCompare(String(a.orderTime || ''));
+  });
+  return { ok: true, data: { rows: out } };
+}
+
+/**
+ * @param {Object} payload
+ * @return {{ ok: true, data: { orderItemCode: string, productStartDate: string, productEndDate: string, updatedAt: string } }|{ ok: false, error: { code: string, message: string } }}
+ */
+function dbStudentMgmtDateEditorSave_(payload) {
+  payload = payload || {};
+  var orderItemCode = payload.orderItemCode != null ? String(payload.orderItemCode).trim() : '';
+  if (!orderItemCode.length) {
+    return { ok: false, error: { code: 'BAD_REQUEST', message: 'orderItemCode가 필요합니다.' } };
+  }
+  var ssStu = dbStuOpen_();
+  if (!ssStu) {
+    return { ok: false, error: { code: 'NO_STUDENT_SHEET', message: '수강생 DB가 없습니다.' } };
+  }
+  var shEv = ssStu.getSheetByName(DB_SHEET_STUDENT_ORDER_EVENTS);
+  if (!shEv || shEv.getLastRow() < 2) {
+    return { ok: false, error: { code: 'NO_EVENT_ROWS', message: '수강생 이벤트 데이터가 없습니다.' } };
+  }
+  var idx = dbStuHeaderIndexMap_(shEv, DB_STUDENT_ORDER_EVENT_HEADERS);
+  var vals = shEv.getRange(2, 1, shEv.getLastRow() - 1, DB_STUDENT_ORDER_EVENT_HEADERS.length).getValues();
+  var rowNo = -1;
+  var found = null;
+  var i;
+  for (i = 0; i < vals.length; i++) {
+    var r = vals[i] || [];
+    if (String(r[idx.order_item_code] != null ? r[idx.order_item_code] : '').trim() === orderItemCode) {
+      rowNo = i + 2;
+      found = r;
+      break;
+    }
+  }
+  if (rowNo < 2 || !found) {
+    return { ok: false, error: { code: 'NOT_FOUND', message: '수정할 주문 항목을 찾지 못했습니다.' } };
+  }
+  var changedStart = Boolean(payload.changedStart);
+  var changedEnd = Boolean(payload.changedEnd);
+  if (!changedStart && !changedEnd) {
+    return { ok: false, error: { code: 'BAD_REQUEST', message: '변경된 값이 없습니다.' } };
+  }
+  var cat = String(found[idx.internal_category] != null ? found[idx.internal_category] : '').trim().toLowerCase();
+  var startCurrent = String(found[idx.product_start_date] != null ? found[idx.product_start_date] : '');
+  var endCurrent = String(found[idx.product_end_date] != null ? found[idx.product_end_date] : '');
+  var startOut = startCurrent;
+  var endOut = endCurrent;
+  if (changedStart) {
+    var startYmd = dbStuNormalizeYmd_(payload.productStartDate != null ? String(payload.productStartDate) : '');
+    if (!startYmd) {
+      return { ok: false, error: { code: 'BAD_REQUEST', message: '시작일 형식이 올바르지 않습니다.' } };
+    }
+    startOut = startYmd + ' 00:00:00';
+    if (!changedEnd) {
+      if (cat === 'jasoseo') {
+        endOut = '';
+      } else {
+        var nd = dbStuDefaultDurationDaysForCategory_(cat);
+        endOut = dbStuEndDateFromStartYmd_(startOut, nd);
+      }
+    }
+  }
+  if (changedEnd) {
+    var endYmd = dbStuNormalizeYmd_(payload.productEndDate != null ? String(payload.productEndDate) : '');
+    endOut = endYmd ? endYmd + ' 23:59:59' : '';
+  }
+  if (cat !== 'jasoseo' && endOut) {
+    var sDt = dbStuDateFromAny_(startOut);
+    var eDt = dbStuDateFromAny_(endOut);
+    if (sDt && eDt && eDt.getTime() < sDt.getTime()) {
+      return { ok: false, error: { code: 'BAD_REQUEST', message: '종료일은 시작일보다 빠를 수 없습니다.' } };
+    }
+  }
+  var nowIso = new Date().toISOString();
+  shEv.getRange(rowNo, idx.product_start_date + 1, 1, 1).setValue(startOut);
+  shEv.getRange(rowNo, idx.product_end_date + 1, 1, 1).setValue(endOut);
+  if (idx.updated_at >= 0) {
+    shEv.getRange(rowNo, idx.updated_at + 1, 1, 1).setValue(nowIso);
+  }
+  return {
+    ok: true,
+    data: {
+      orderItemCode: orderItemCode,
+      productStartDate: startOut,
+      productEndDate: endOut,
+      updatedAt: nowIso
+    }
+  };
 }
 
 /**
@@ -431,6 +846,11 @@ function dbStudentMgmtRebuildFromMaster_() {
   var j;
   for (j = 0; j < iVals.length; j++) {
     var L = iVals[j] || [];
+    var itemSkip = String(L[1] != null ? L[1] : '').trim();
+    if (itemSkip && DB_STU_FORCE_SKIP_ORDER_ITEM_CODES_[itemSkip]) {
+      skipped++;
+      continue;
+    }
     var ordNo = String(L[2] != null ? L[2] : '').trim();
     var pkey = dbPmRowKey_(L[8]);
     var cat = 'unmapped';
@@ -493,6 +913,7 @@ function dbStudentMgmtRebuildFromMaster_() {
       L[15],
       L[16],
       L[17],
+      '',
       nowIso,
       batchId
     ];
@@ -506,12 +927,22 @@ function dbStudentMgmtRebuildFromMaster_() {
       if (prev.end !== '' && prev.end != null) {
         rowEv[ixEvEnd] = prev.end;
       }
+      if (prev.updated !== '' && prev.updated != null) {
+        rowEv[18] = prev.updated;
+      }
     }
     if (catLo === 'jasoseo') {
       rowEv[ixEvEnd] = '';
     }
 
     outEv.push(rowEv);
+  }
+  var fixedPack = dbStuBuildFixedManualRows_(preserve, nowIso, batchId);
+  var fixedRows = fixedPack.rows || [];
+  var manualNameByMemberCode = fixedPack.manualNameByMemberCode || {};
+  var fr;
+  for (fr = 0; fr < fixedRows.length; fr++) {
+    outEv.push(fixedRows[fr]);
   }
 
   var memberCodes = {};
@@ -530,7 +961,9 @@ function dbStudentMgmtRebuildFromMaster_() {
     var mr = memberRowByCode[code];
     if (!mr) {
       var nmGuest =
-        ordererNameByMemberCode[code] != null ? String(ordererNameByMemberCode[code]).trim() : '';
+        manualNameByMemberCode[code] != null
+          ? String(manualNameByMemberCode[code]).trim()
+          : ordererNameByMemberCode[code] != null ? String(ordererNameByMemberCode[code]).trim() : '';
       var nameGuest = nmGuest.length ? nmGuest + '(비회원)' : '';
       var groupTitlesGuest = JSON.stringify(['비회원']);
       outMem.push([code, '', nameGuest, '', '', groupTitlesGuest, nowIso, batchId]);

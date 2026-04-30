@@ -79,15 +79,18 @@
 | 컬럼 | 기본 채움 |
 |------|-----------|
 | `product_start_date` | `orders.order_time` 으로 **구매일(서울 날짜)** 을 정한 뒤, 그 **다음 날 00:00:00** (서울). 하루를 24시간 단위로 쓰는 전제. |
-| `product_end_date` | `product_start_date` 기준 **기간 가산** (아래). |
+| `product_end_date` | `product_start_date` **날짜**를 1일째로 포함한 N일권의 **마지막 날** 23:59:59 (아래 N). |
 
-**기간 가산 (초기값 — 변경 예정이 큼, 코드에는 별도 블록 주석으로 “변경 구간” 표시할 것)**
+**이용 기간 N일 (시작일 포함 — 초기값, 코드 `dbStuEndDateFromStartYmd_`)**
 
-| `internal_category` | 가산 일수 |
-|---------------------|-----------|
-| `solpass` | +28일 |
-| `challenge` | +14일 |
-| `solutine` | +28일 |
+종료 **날짜** = 시작 **날짜**에 달력으로 **(N − 1)** 일을 더한 날.  
+예: 시작 3/27·28일권 → 마지막 날 4/23.
+
+| `internal_category` | N (일) |
+|---------------------|--------|
+| `solpass` | 28 |
+| `challenge` | 14 |
+| `solutine` | 26 (시작일 포함; 월~금 20영업일·4주차 금요일 종료와 맞추려 캘린더 26일로 통일) |
 
 ### 6.2 `jasoseo`
 
@@ -142,7 +145,7 @@
 
 ### 8.2 원천에서 **유지**하는 열 (순서는 구현 시 헤더 상수로 고정)
 
-`order_item_code`, `order_no`, `order_status`, `section_status`, `claim_status`, `claim_type`, `claim_event_time`, `prod_no`, `prod_name`, `options_raw`, `options_count`, `row_json`, `fetched_at`, `source_sync_id`
+`order_item_code`, `order_no`, `order_status`, `section_status`, `claim_status`, `claim_type`, `claim_event_time`, `prod_no`, `prod_name`, `options_raw`, `options_count`, `row_json`, `updated_at`, `fetched_at`, `source_sync_id`
 
 ### 8.3 조인·운영 열 (시트에 저장)
 
@@ -159,7 +162,9 @@
 
 식별·조인·기간·상태·상품·메타 순.
 
-`order_item_code`, `order_no`, `member_code`, `order_time`, `internal_category`, `lifecycle`, `product_start_date`, `product_end_date`, `order_status`, `section_status`, `claim_status`, `claim_type`, `claim_event_time`, `prod_no`, `prod_name`, `options_raw`, `options_count`, `row_json`, `fetched_at`, `source_sync_id`
+`order_item_code`, `order_no`, `member_code`, `order_time`, `internal_category`, `lifecycle`, `product_start_date`, `product_end_date`, `order_status`, `section_status`, `claim_status`, `claim_type`, `claim_event_time`, `prod_no`, `prod_name`, `options_raw`, `options_count`, `row_json`, `updated_at`, `fetched_at`, `source_sync_id`
+
+- `updated_at`: 프론트의 “수강 시작일, 종료일 설정”에서 시작/종료를 저장한 시각(ISO). 날짜 미수정 행은 빈 값일 수 있다.
 
 ### 8.5 키
 

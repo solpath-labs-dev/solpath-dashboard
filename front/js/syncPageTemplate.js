@@ -501,6 +501,37 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
               </div>
               <p class="sp-pm__hint" id="sp-stu-hint" hidden></p>
               <p class="actions-note" id="sp-stu-status" role="status" aria-live="polite"></p>
+              <details class="sp-stu-date-editor" id="sp-stu-dateEditor">
+                <summary class="sp-stu-date-editor__summary">수강 시작일, 종료일 설정</summary>
+                <p class="sp-stu-date-editor__lede">
+                  멤버·카테고리별 최신 주문만 보입니다. 종료일이 현재 기준 2주(14일) 초과 지난 건은 숨깁니다.
+                </p>
+                <div class="sp-stu-date-editor__toolbar">
+                  <button type="button" class="btn btn--secondary" id="sp-stu-btnDateLoad">목록 불러오기</button>
+                </div>
+                <p class="sp-pm__hint" id="sp-stu-dateHint" hidden></p>
+                <div class="sp-stu-date-editor__table-wrap">
+                  <table class="sp-stu-date-editor__table" id="sp-stu-dateTable">
+                    <thead>
+                      <tr>
+                        <th>멤버</th>
+                        <th>카테고리</th>
+                        <th>상품</th>
+                        <th>주문일</th>
+                        <th>시작일</th>
+                        <th>종료일</th>
+                        <th>수정일</th>
+                        <th>저장</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sp-stu-dateTbody">
+                      <tr>
+                        <td colspan="8" class="sp-stu-date-editor__empty">목록을 불러와 주세요.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </details>
             </div>
           </div>
         </section>
