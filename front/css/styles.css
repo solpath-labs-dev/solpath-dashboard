@@ -2225,26 +2225,52 @@ input.sp-confirm:disabled {
 
 .sp-stu-date-editor__toolbar {
   display: flex;
-  gap: 0.45rem;
+  justify-content: space-between;
+  gap: 0.55rem;
   flex-wrap: wrap;
   align-items: center;
   margin: 0 0 0.55rem;
 }
 
+.sp-stu-date-editor__toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+#sp-stu-btnDateLoad,
+#sp-stu-btnDateSaveAll {
+  padding: 0.28rem 0.62rem;
+  min-height: 0;
+  border-radius: 7px;
+  font-size: calc(0.78rem + var(--sp-text-bump));
+}
+
 .sp-stu-date-editor__filter {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: calc(0.8rem + var(--sp-text-bump));
-  color: #324152;
+  gap: 0.32rem;
+  font-size: calc(0.76rem + var(--sp-text-bump));
+  color: #31445a;
+  background: #f7fbff;
+  border: 1px solid #d8e6f4;
+  border-radius: 999px;
+  padding: 0.2rem 0.42rem;
 }
 
 .sp-stu-date-editor__filter select {
   font: inherit;
-  padding: 0.2rem 0.35rem;
-  border: 1px solid #cfd6de;
-  border-radius: 6px;
+  padding: 0.16rem 0.32rem;
+  border: 1px solid #c9d9ea;
+  border-radius: 999px;
   background: #fff;
+  color: #224466;
+}
+
+.sp-stu-date-editor__filter select:focus {
+  outline: 2px solid #9dc2e8;
+  outline-offset: 1px;
 }
 
 .sp-stu-date-editor__table-wrap {

@@ -507,16 +507,19 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                   멤버·카테고리별 최신 주문만 보입니다. 종료일이 현재 기준 2주(14일) 초과 지난 건은 숨깁니다.
                 </p>
                 <div class="sp-stu-date-editor__toolbar">
-                  <button type="button" class="btn btn--secondary" id="sp-stu-btnDateLoad">목록 불러오기</button>
-                  <label class="sp-stu-date-editor__filter">
-                    <span>카테고리 필터</span>
-                    <select id="sp-stu-dateFilterCat">
-                      <option value="">전체</option>
-                      <option value="solpass">솔패스</option>
-                      <option value="solutine">솔루틴</option>
-                      <option value="challenge">챌린지</option>
-                    </select>
-                  </label>
+                  <div class="sp-stu-date-editor__toolbar-left">
+                    <button type="button" class="btn btn--secondary" id="sp-stu-btnDateLoad">목록 불러오기</button>
+                    <label class="sp-stu-date-editor__filter">
+                      <span>카테고리</span>
+                      <select id="sp-stu-dateFilterCat">
+                        <option value="">전체</option>
+                        <option value="solpass">솔패스</option>
+                        <option value="solutine">솔루틴</option>
+                        <option value="challenge">챌린지</option>
+                      </select>
+                    </label>
+                  </div>
+                  <button type="button" class="btn btn--primary" id="sp-stu-btnDateSaveAll">전체 수정 반영</button>
                 </div>
                 <p class="sp-pm__hint" id="sp-stu-dateHint" hidden></p>
                 <div class="sp-stu-date-editor__table-wrap">
@@ -546,9 +549,6 @@ export const SYNC_PAGE_SHELL_HTML = `<div class="app-shell app-shell--v9">
                       </tr>
                     </tbody>
                   </table>
-                </div>
-                <div class="sp-stu-date-editor__toolbar">
-                  <button type="button" class="btn btn--primary" id="sp-stu-btnDateSaveAll">전체 수정 반영</button>
                 </div>
               </details>
             </div>
