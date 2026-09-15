@@ -5333,6 +5333,12 @@ button.sp-stu-remark__item--open:hover {
   border-color: #fb7185;
 }
 
+#solpath-plan-root .sp-plan-curBadge--comprehensive {
+  background: #fce7f3;
+  color: #9d174d;
+  border-color: #f472b6;
+}
+
 #solpath-plan-root .sp-plan-curBadge--math {
   background: #e0f2fe;
   color: #0369a1;
@@ -6048,6 +6054,9 @@ button.sp-stu-remark__item--open:hover {
 #solpath-plan-root .sp-plan-todoSideTable tbody tr.sp-plan-todoCat--read > *:first-child {
   box-shadow: inset 4px 0 0 #e11d48;
 }
+#solpath-plan-root .sp-plan-todoSideTable tbody tr.sp-plan-todoCat--comprehensive > *:first-child {
+  box-shadow: inset 4px 0 0 #c026d3;
+}
 #solpath-plan-root .sp-plan-todoSideTable tbody tr.sp-plan-todoCat--math > *:first-child {
   box-shadow: inset 4px 0 0 #0284c7;
 }
@@ -6649,6 +6658,11 @@ button.sp-stu-remark__item--open:hover {
   color: #9f1239;
   border-color: #fb7185;
 }
+#solpath-plan-root .sp-plan-hourTodoPill--cat-comprehensive {
+  background: #fce7f3;
+  color: #9d174d;
+  border-color: #f472b6;
+}
 #solpath-plan-root .sp-plan-hourTodoPill--cat-math {
   background: #e0f2fe;
   color: #0369a1;
@@ -6783,6 +6797,10 @@ button.sp-stu-remark__item--open:hover {
 #solpath-plan-root .sp-plan-slotcell--todo--read.is-on {
   border-color: #e11d48;
   background: linear-gradient(180deg, #fff1f2 0%, #fda4af 100%);
+}
+#solpath-plan-root .sp-plan-slotcell--todo--comprehensive.is-on {
+  border-color: #c026d3;
+  background: linear-gradient(180deg, #fdf4ff 0%, #f0abfc 100%);
 }
 #solpath-plan-root .sp-plan-slotcell--todo--math.is-on {
   border-color: #0284c7;
@@ -7021,6 +7039,12 @@ button.sp-stu-remark__item--open:hover {
   box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.22);
 }
 
+#solpath-plan-root .sp-plan-timecell--todo--comprehensive.is-on {
+  border-color: #c026d3;
+  background: linear-gradient(180deg, #fce7f3 0%, #f0abfc 100%);
+  box-shadow: inset 0 0 0 1px rgba(192, 38, 211, 0.25);
+}
+
 #solpath-plan-root .sp-plan-timecell--todo--math.is-on {
   border-color: #0284c7;
   background: linear-gradient(180deg, #e0f2fe 0%, #7dd3fc 100%);
@@ -7091,6 +7115,11 @@ button.sp-stu-remark__item--open:hover {
 #solpath-plan-root .sp-plan-chip--read {
   background: #bfdbfe;
   color: #1e3a8a;
+}
+
+#solpath-plan-root .sp-plan-chip--comprehensive {
+  background: #f5d0fe;
+  color: #86198f;
 }
 
 #solpath-plan-root .sp-plan-chip--math {

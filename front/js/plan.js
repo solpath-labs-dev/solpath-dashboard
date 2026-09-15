@@ -3848,6 +3848,7 @@ function plannerSubjectCodeFromSubjectField_(subjectRaw) {
   if (sl === 'grammar' || s === '문법') return 'grammar';
   if (sl === 'logic' || s === '논리') return 'logic';
   if (sl === 'read' || s === '독해') return 'read';
+  if (sl === 'comprehensive' || s === '종합') return 'comprehensive';
   if (sl === 'math' || s === '수학') return 'math';
   if (sl === 'toeic_rc' || /^토익\s*rc$/i.test(s)) return 'toeic_rc';
   if (sl === 'toeic_lc' || /^토익\s*lc$/i.test(s)) return 'toeic_lc';
@@ -3857,7 +3858,7 @@ function plannerSubjectCodeFromSubjectField_(subjectRaw) {
 }
 
 /**
- * 강좌 행(`subject`·`course_name`) → 빠른등록 코드 `grammar`|`logic`|`read`|`vocab` (없으면 빈 문자열).
+ * 강좌 행(`subject`·`course_name`) → 빠른등록 코드 `grammar`|`logic`|`read`|`comprehensive`|`vocab` 등 (없으면 빈 문자열).
  * `subject` 컬럼이 있으면 우선(예: LOGIC-TREE 독해 강좌명에 logic 오매칭 방지).
  * @param {object} course
  * @returns {string}
@@ -3872,6 +3873,7 @@ function plannerSubjectCodeFromCatalogCourse_(course) {
   if (/\bgrammar\b|문법/.test(blob)) return 'grammar';
   if (/\blogic\b|논리/.test(blob)) return 'logic';
   if (/\bread\b|독해/.test(blob)) return 'read';
+  if (/\bcomprehensive\b|종합/.test(blob)) return 'comprehensive';
   if (/\bmath\b|수학/.test(blob)) return 'math';
   if (/\btoeic[_\s-]?rc\b|토익\s*rc/i.test(blob)) return 'toeic_rc';
   if (/\btoeic[_\s-]?lc\b|토익\s*lc/i.test(blob)) return 'toeic_lc';
@@ -4591,6 +4593,7 @@ const PLANNER_STUDY_SUBJECT_DEFS = [
   { code: 'grammar', label: '문법', short: '문' },
   { code: 'logic', label: '논리', short: '논' },
   { code: 'read', label: '독해', short: '독' },
+  { code: 'comprehensive', label: '종합', short: '종' },
   { code: 'math', label: '수학', short: '수' },
   { code: 'toeic_rc', label: '토익RC', short: 'RC' },
   { code: 'toeic_lc', label: '토익LC', short: 'LC' },

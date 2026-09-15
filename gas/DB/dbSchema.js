@@ -201,7 +201,7 @@ var DB_PLANNER_STUDENT_LINK_HEADERS = [
  * - `task_id`: 월 탭 안 **고정 문자열** (apply가 재번호 매기지 않음).
  * - `date`: **지금** 그 할 일이 속하는 날 `YYYY-MM-DD`. 날짜 이동 시 이 칸만 바뀜(행 추가 없음).
  * - `trace_dates`: 밀림(뒤로 미룸)으로 **떠난 날**만 JSON 배열 `["YYYY-MM-DD",…]`. UI에서 그날 회색 흔적. 앞당김에는 넣지 않음. 없으면 `[]`.
- * - `category`: 과목 `grammar`|`logic`|`read`|`math`|`toeic_rc`|`toeic_lc`|`vocab`|`misc`(기타), `fixed`, `event`, `memo`, `routine` (`event`는 제목만·달력 별 표시, `routine`은 `title`로 취침·식사·자습 구분). 직접입력·커리큘럼 상수 세트는 프론트에서 정함.
+ * - `category`: 과목 `grammar`|`logic`|`read`|`comprehensive`(종합)|`math`|`toeic_rc`|`toeic_lc`|`vocab`|`misc`(기타), `fixed`, `event`, `memo`, `routine` (`event`는 제목만·달력 별 표시, `routine`은 `title`로 취침·식사·자습 구분). 직접입력·커리큘럼 상수 세트는 프론트에서 정함.
  * - `lecture_id`: 마스터 `planner_curriculum_lectures.lecture_id`; 해당 없으면 빈 칸.
  * - `timeline_slots`: 슬롯 키 JSON 배열 문자열. 없으면 **`[]`**.
  * - `mark`: 일일 ○△×.
